@@ -1,0 +1,8 @@
+node_modules
+.data
+dist
+apps/web/.next
+package-lock.json
+packages/contracts
+apps/web/next-env.d.ts
+docs/source

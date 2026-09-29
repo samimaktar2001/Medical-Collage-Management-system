@@ -1,0 +1,8 @@
+node_modules
+.data
+dist
+apps/web/.next
+.env
+*.log
+test-results
+playwright-report

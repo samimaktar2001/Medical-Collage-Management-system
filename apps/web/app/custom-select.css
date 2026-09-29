@@ -1,0 +1,107 @@
+.custom-select {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+button.custom-select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 43px;
+  padding: 10px 12px;
+  border: 1px solid #bdccda;
+  border-radius: 5px;
+  background: #fff;
+  color: #203247;
+  font: inherit;
+  font-weight: 400;
+  text-align: left;
+  cursor: pointer;
+}
+.custom-select-trigger span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.custom-select-trigger svg {
+  flex-shrink: 0;
+  color: #007b80;
+}
+.login-main form .custom-select-trigger {
+  margin-top: 0;
+}
+button.custom-select-trigger:hover {
+  background: #fff;
+  border-color: #007b80;
+}
+button.custom-select-trigger:focus-visible,
+.college-site button.custom-select-trigger:focus-visible,
+button.custom-select-trigger[aria-expanded='true'] {
+  outline: none;
+  border-color: #007b80;
+  box-shadow: 0 0 0 2px #007b8024;
+}
+.custom-select-trigger[aria-expanded='true'] svg {
+  transform: rotate(180deg);
+}
+button.custom-select-trigger:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+button.custom-select-trigger[aria-invalid='true'] {
+  border-color: #b42318;
+}
+.custom-select-options {
+  position: fixed;
+  inset: auto;
+  box-sizing: border-box;
+  list-style: none;
+  margin: 0;
+  padding: 5px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: #fff;
+  color: #203247;
+  border: 1px solid #d5e0e7;
+  border-radius: 7px;
+  box-shadow: 0 8px 24px #102a4324;
+  font: inherit;
+}
+.custom-select-options li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0;
+  padding: 10px;
+  border-radius: 3px;
+  font-size: 14px;
+  line-height: 1.4;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.custom-select-options li svg {
+  flex-shrink: 0;
+}
+.custom-select-options li[data-active='true'] {
+  background: #eaf5f5;
+  color: #00696d;
+}
+.custom-select-options li[aria-selected='true'] {
+  color: #00696d;
+  font-weight: 650;
+}
+.toolbar > .custom-select {
+  max-width: 220px;
+}
+td .custom-select {
+  min-width: 150px;
+}
+@media (max-width: 600px) {
+  .toolbar > .custom-select {
+    max-width: none;
+  }
+}

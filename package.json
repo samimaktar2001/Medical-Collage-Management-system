@@ -1,0 +1,56 @@
+{
+  "name": "medora-college-platform",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "build": "tsc -p apps/api/tsconfig.json && next build apps/web",
+    "start": "node scripts/dev.mjs --production",
+    "typecheck": "tsc -p apps/api/tsconfig.json --noEmit && tsc -p apps/web/tsconfig.json --noEmit",
+    "test": "tsc -p apps/api/tsconfig.json && tsx --test tests/*.test.ts",
+    "test:e2e": "playwright test",
+    "db:migrate": "tsx apps/api/src/migrate.ts",
+    "db:seed": "tsx apps/api/src/seed-cli.ts",
+    "lint": "eslint apps scripts tests",
+    "format": "prettier --write apps scripts tests docs *.json *.mjs *.ts *.md infra",
+    "contracts": "tsx scripts/contracts.ts",
+    "contracts:check": "tsx scripts/contracts.ts --check",
+    "traceability": "node scripts/traceability.mjs"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "^0.3.14",
+    "@hookform/resolvers": "^5.2.2",
+    "@nestjs/common": "^11.1.6",
+    "@nestjs/core": "^11.1.6",
+    "@nestjs/platform-express": "^11.1.6",
+    "@tanstack/react-query": "^5.90.2",
+    "bcrypt": "^6.0.0",
+    "lucide-react": "^0.544.0",
+    "next": "16.3.6",
+    "pg": "^8.16.3",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-hook-form": "^7.63.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
+    "zod": "^4.1.11"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.55.1",
+    "@types/bcrypt": "^6.0.0",
+    "@types/express": "^5.0.3",
+    "@types/node": "^22.18.6",
+    "@types/pg": "^8.15.5",
+    "@types/react": "^19.1.13",
+    "@types/react-dom": "^19.1.9",
+    "eslint": "^10.11.0",
+    "prettier": "^3.9.9",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.70.1"
+  },
+  "engines": {
+    "node": ">=22.16.0"
+  }
+}
