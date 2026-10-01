@@ -5,15 +5,15 @@
                     │             Vercel              │
                     │            apps/web             │
                     │      Next.js 16 (SSR/Edge)      │
-                    │   https://app.yourdomain.com    │
+                    │   https://<your-app>.vercel.app │
                     └────────────────┬────────────────┘
-                                     │ HTTPS (Internal Rewrite or Direct API)
+                                     │ HTTPS (Next.js Internal Rewrite)
                                      ▼
                     ┌─────────────────────────────────┐
-                    │             Railway             │
+                    │       Render.com (Free)         │
                     │            apps/api             │
                     │     NestJS API (Node 22)        │
-                    │   https://api.yourdomain.com    │
+                    │   https://<api>.onrender.com    │
                     └────────┬───────────────┬────────┘
                              │               │
                ┌─────────────┘               └─────────────┐
@@ -29,10 +29,10 @@
 
 | Component | Platform | Primary Role |
 | :--- | :--- | :--- |
-| **Frontend Web** | **Vercel** | Next.js 16 UI, public portal, SSR, responsive management interface. |
-| **Backend API** | **Railway** | NestJS authoritative business logic, RBAC, domain validation, email dispatch, S3 upload coordination. |
-| **Database** | **Supabase** | Cloud PostgreSQL with connection pooling and schema migrations. |
-| **Object Storage**| **Supabase Storage** | S3-compatible private document storage with backend presigned URL authorization. |
+| **Frontend Web** | **Vercel (Free)** | Next.js 16 UI, public portal, SSR, responsive management interface. |
+| **Backend API** | **Render (Free)** | NestJS authoritative business logic, RBAC, domain validation, email dispatch, S3 upload coordination. |
+| **Database** | **Supabase (Free)** | Cloud PostgreSQL with connection pooling and schema migrations. |
+| **Object Storage**| **Supabase Storage (Free)** | S3-compatible private document storage with backend presigned URL authorization. |
 | **CI/CD** | **GitHub Actions** | Automated typechecking, contracts check, linting, and unit/integration verification on every `git push`. |
 
 ---
