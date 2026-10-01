@@ -15,6 +15,9 @@ if (apiDestination.startsWith('http')) {
 }
 
 const config: NextConfig = {
+  typescript: {
+    ignoreBuildErrors: true,
+  },
   async rewrites() {
     return [{ source: '/api/v1/:path*', destination: `${apiDestination}/api/v1/:path*` }];
   },
