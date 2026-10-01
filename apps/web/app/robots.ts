@@ -5,8 +5,8 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: '*',
-        allow: ['/institution', '/institution/'],
-        disallow: ['/', '/api/'],
+        allow: ['/'],
+        disallow: ['/portal/', '/api/'],
       },
     ],
     sitemap: `${origin}/sitemap.xml`,

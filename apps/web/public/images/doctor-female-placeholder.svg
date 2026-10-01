@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGradFemale" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FCE7F3" />
+      <stop offset="100%" stop-color="#E0E7FF" />
+    </linearGradient>
+    <linearGradient id="coatGradFemale" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="100%" stop-color="#F8FAFC" />
+    </linearGradient>
+  </defs>
+
+  <!-- Circular Background -->
+  <circle cx="64" cy="64" r="64" fill="url(#bgGradFemale)" />
+
+  <!-- Hair Back -->
+  <path d="M38 52 C38 28 90 28 90 52 C90 74 86 86 84 94 L44 94 C42 86 38 74 38 52 Z" fill="#64748B" />
+
+  <!-- Head / Face -->
+  <circle cx="64" cy="48" r="20" fill="#E2E8F0" />
+  
+  <!-- Hair Front Style -->
+  <path d="M42 42 C44 32 64 26 86 36 C86 48 84 54 84 54 C74 44 56 42 42 42 Z" fill="#475569" />
+
+  <!-- Neck -->
+  <path d="M58 66 L70 66 L72 78 L56 78 Z" fill="#CBD5E1" />
+
+  <!-- Shoulders / Lab Coat -->
+  <path d="M28 128 C28 94 42 82 64 82 C86 82 100 94 100 128 Z" fill="url(#coatGradFemale)" stroke="#CBD5E1" stroke-width="1.5" />
+
+  <!-- Inner Scrub Top (Clinical Teal) -->
+  <polygon points="64,82 56,100 72,100" fill="#0F766E" />
+
+  <!-- Stethoscope -->
+  <path d="M50 82 C48 96 54 106 58 110 C62 114 62 118 62 122" fill="none" stroke="#007B80" stroke-width="3" stroke-linecap="round" />
+  <path d="M78 82 C80 96 74 106 70 110" fill="none" stroke="#007B80" stroke-width="3" stroke-linecap="round" />
+  <circle cx="62" cy="122" r="5" fill="#0F766E" stroke="#5EEAD4" stroke-width="2" />
+</svg>

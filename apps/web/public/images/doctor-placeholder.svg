@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E0F2FE" />
+      <stop offset="100%" stop-color="#CCFBF1" />
+    </linearGradient>
+    <linearGradient id="coatGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="100%" stop-color="#F1F5F9" />
+    </linearGradient>
+  </defs>
+
+  <!-- Circular Background -->
+  <circle cx="64" cy="64" r="64" fill="url(#bgGrad)" />
+
+  <!-- Head / Face -->
+  <circle cx="64" cy="46" r="22" fill="#E2E8F0" />
+  
+  <!-- Hair / Head Contour -->
+  <path d="M42 44 C42 28 86 28 86 44 C86 36 80 26 64 26 C48 26 42 36 42 44 Z" fill="#94A3B8" />
+
+  <!-- Neck -->
+  <path d="M57 65 L71 65 L73 78 L55 78 Z" fill="#CBD5E1" />
+
+  <!-- Shoulders / Body (Lab Coat) -->
+  <path d="M26 128 C26 92 40 80 64 80 C88 80 102 92 102 128 Z" fill="url(#coatGrad)" stroke="#CBD5E1" stroke-width="1.5" />
+
+  <!-- Inner Shirt & Tie / Scrub V-Neck -->
+  <polygon points="64,80 56,98 72,98" fill="#0F766E" />
+  <polygon points="64,86 61,108 67,108" fill="#0D5E57" />
+
+  <!-- Lapels of White Medical Coat -->
+  <path d="M44 86 L58 108 L54 128" fill="none" stroke="#94A3B8" stroke-width="2" stroke-linecap="round" />
+  <path d="M84 86 L70 108 L74 128" fill="none" stroke="#94A3B8" stroke-width="2" stroke-linecap="round" />
+
+  <!-- Stethoscope around neck -->
+  <path d="M50 78 C48 94 54 104 58 108 C62 112 62 116 62 120" fill="none" stroke="#0F766E" stroke-width="3" stroke-linecap="round" />
+  <path d="M78 78 C80 94 74 104 70 108" fill="none" stroke="#0F766E" stroke-width="3" stroke-linecap="round" />
+  <!-- Stethoscope Chest Piece -->
+  <circle cx="62" cy="120" r="5" fill="#0D5E57" stroke="#5EEAD4" stroke-width="2" />
+</svg>

@@ -3,6 +3,7 @@ import CustomSelect from './custom-select';
 import { Controller, useForm } from 'react-hook-form';
 import { Row } from './workspace';
 import { Field } from './resource-config';
+import { MedoraDatePicker } from './MedoraDatePicker';
 export type Action = { id: string; label: string; reason?: boolean; fields?: Field[] };
 export function actionsFor(resource: string, row: Row, me: Row): Action[] {
   const role = me.role,
@@ -205,6 +206,43 @@ export function ActionForm({
               />
             ) : f.type === 'textarea' ? (
               <textarea id={`action-${f.key}`} {...register(f.key, { required: !f.optional })} />
+            ) : f.type === 'date' ? (
+              (() => {
+                const k = (f.key + ' ' + (f.label || '')).toLowerCase();
+                const isPast = k.includes('issue') || k.includes('activity') || k.includes('birth') || k.includes('incident');
+                const isFuture = k.includes('due') || k.includes('review') || k.includes('archive') || k.includes('available') || k.includes('expire');
+                return (
+                  <Controller
+                    name={f.key}
+                    control={control}
+                    rules={{
+                      required: !f.optional ? 'This field is required.' : false,
+                      validate: (val) => {
+                        if (!val) return true;
+                        const d = new Date(val);
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        if (isPast && d > new Date()) return 'Date cannot be in the future.';
+                        if (isFuture && d < today) return 'Date cannot be in the past.';
+                        return true;
+                      },
+                    }}
+                    render={({ field, fieldState }) => (
+                      <MedoraDatePicker
+                        id={`action-${f.key}`}
+                        label=""
+                        size="small"
+                        disableFuture={isPast}
+                        disablePast={isFuture}
+                        value={field.value || ''}
+                        onChange={field.onChange}
+                        error={!!fieldState.error}
+                        helperText={fieldState.error?.message}
+                      />
+                    )}
+                  />
+                );
+              })()
             ) : (
               <input
                 id={`action-${f.key}`}
@@ -217,7 +255,7 @@ export function ActionForm({
         {action.reason && (
           <div className="form-field wide">
             <label htmlFor="action-reason">Reason / review note *</label>
-            <textarea id="action-reason" {...register('reason', { required: true })} />
+            <textarea id="action-reason" {...register('reason', { required: true })} placeholder="Provide a detailed reason..." />
           </div>
         )}
       </div>

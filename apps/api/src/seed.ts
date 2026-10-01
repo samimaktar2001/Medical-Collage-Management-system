@@ -3,7 +3,7 @@ import { Database } from './database';
 export async function seed(db: Database) {
   if (process.env.NODE_ENV === 'production')
     throw new Error('Development seeds forbidden in production');
-  if ((await db.query('SELECT id FROM institutions LIMIT 1')).rows.length) return;
+  if ((await db.query("SELECT id FROM institutions WHERE id='demo' LIMIT 1")).rows.length) return;
   await db.transaction(async (tx) => {
     await tx.query(
       "INSERT INTO institutions(id,name) VALUES ('demo','Medora Medical College · Demonstration'),('other','Isolation test institution')",

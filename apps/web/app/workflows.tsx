@@ -11,6 +11,7 @@ import {
   Plus,
   Search,
   ShieldCheck,
+  Loader2,
 } from 'lucide-react';
 import { api, Row, viewNames, Badge, money, shortDate, clockTime } from './workspace';
 import { columns, createRoles, descriptions, statuses } from './resource-config';
@@ -65,7 +66,7 @@ export function ResourceView({ resource, me }: { resource: string; me: Row }) {
     const next = new URLSearchParams(params);
     next.set(key, value);
     if (key !== 'page') next.delete('page');
-    router.replace(`/?${next}`, { scroll: false });
+    router.replace(`/portal?${next}`, { scroll: false });
   };
   const saved = () => {
     client.invalidateQueries();
@@ -135,9 +136,11 @@ export function ResourceView({ resource, me }: { resource: string; me: Row }) {
           <span className="record-count">{q.data?.total ?? '—'} records in your scope</span>
         </div>
         {q.isPending ? (
-          <p className="empty" aria-busy="true">
-            Loading records…
-          </p>
+          <div className="empty" aria-busy="true">
+            <Loader2 size={30} className="spinner" style={{ animation: 'spin 1s linear infinite' }} />
+            <p style={{ marginTop: '1rem' }}>Loading records…</p>
+            <style>{`@keyframes spin { 100% { transform: rotate(360deg); } }`}</style>
+          </div>
         ) : q.error ? (
           <div className="empty">
             <p className="inline-error">{q.error.message}</p>
@@ -150,7 +153,9 @@ export function ResourceView({ resource, me }: { resource: string; me: Row }) {
             <p>
               {search || status
                 ? 'Try another search or status filter.'
-                : 'Records created in your scope will appear here.'}
+                : resource === 'students' && me.role === 'student'
+                  ? 'Your student profile is not yet fully linked. Please contact the registrar.'
+                  : 'Records created in your scope will appear here.'}
             </p>
           </div>
         ) : (

@@ -6,7 +6,7 @@ const environment = { ...process.env, ...(production ? { NODE_ENV: 'production' 
 const children = [
   spawn(
     process.execPath,
-    production ? ['dist/api/main.js'] : ['node_modules/tsx/dist/cli.mjs', 'apps/api/src/main.ts'],
+    production ? ['dist/api/main.js'] : ['node_modules/tsx/dist/cli.mjs', 'watch', 'apps/api/src/main.ts'],
     { stdio: 'inherit', env: environment },
   ),
   spawn(

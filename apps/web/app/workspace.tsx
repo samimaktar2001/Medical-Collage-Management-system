@@ -28,8 +28,13 @@ import {
   Layers,
   Building2,
   SlidersHorizontal,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { ResourceView } from './workflows';
+import toast from 'react-hot-toast';
+import { useForm, Controller } from 'react-hook-form';
+
 export type Row = Record<string, any>;
 export class APIError extends Error {
   constructor(
@@ -207,37 +212,62 @@ export const viewNames: Record<string, string> = {
   policies: 'Policy approvals',
   masters: 'Organization',
 };
-function Login({ onLogin }: { onLogin: () => void }) {
-  const [mode, setMode] = useState<'login' | 'signup' | 'verify'>('login'),
-    [email, setEmail] = useState(''),
-    [password, setPassword] = useState(''),
-    [name, setName] = useState(''),
-    [institutionId, setInstitutionId] = useState('demo'),
-    [token, setToken] = useState(''),
-    [busy, setBusy] = useState(false),
-    [error, setError] = useState(''),
-    [message, setMessage] = useState('');
+type AuthForm = {
+  name?: string;
+  institutionId?: string;
+  email?: string;
+  password?: string;
+  token?: string;
+};
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
+function Login({ onLogin }: { onLogin: () => void }) {
+  const searchParams = useSearchParams();
+  const setupToken = searchParams.get('setup');
+  const resetToken = searchParams.get('reset');
+  
+  const [mode, setMode] = useState<'login' | 'signup' | 'verify' | 'setup' | 'forgot' | 'reset'>(setupToken ? 'setup' : resetToken ? 'reset' : 'login'),
+    [showPassword, setShowPassword] = useState(false),
+    [busy, setBusy] = useState(false);
+  
+  const { register, handleSubmit, formState: { errors }, reset, clearErrors, control } = useForm<AuthForm>();
+  
+  const { data: instData } = useQuery({
+    queryKey: ['public-institutions'],
+    queryFn: () => api('public/institutions'),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  const onSubmit = async (data: AuthForm) => {
     setBusy(true);
-    setError('');
-    setMessage('');
     try {
       if (mode === 'login') {
-        await api('auth/login', 'POST', { email, password });
+        await api('auth/login', 'POST', { email: data.email, password: data.password });
         onLogin();
       } else if (mode === 'signup') {
-        const res = await api('auth/signup', 'POST', { name, email, password, institution_id: institutionId });
-        setMessage(res.message || 'Check your email for the verification token.');
+        const res = await api('auth/signup', 'POST', { 
+          name: data.name, email: data.email, password: data.password, institution_id: data.institutionId 
+        });
+        toast.success(res.message || 'Check your email for the verification token.');
         setMode('verify');
       } else if (mode === 'verify') {
-        const res = await api('auth/verify-email', 'POST', { token });
-        setMessage(res.message + ' You can now log in.');
+        const res = await api('auth/verify-email', 'POST', { token: data.token });
+        toast.success(res.message + ' You can now log in.');
+        setMode('login');
+      } else if (mode === 'setup') {
+        const res = await api('auth/setup-password', 'POST', { token: setupToken || data.token, password: data.password });
+        toast.success(res.message);
+        setMode('login');
+      } else if (mode === 'forgot') {
+        const res = await api('auth/forgot-password', 'POST', { email: data.email });
+        toast.success(res.message);
+        setMode('login');
+      } else if (mode === 'reset') {
+        const res = await api('auth/reset-password', 'POST', { token: resetToken || data.token, password: data.password });
+        toast.success(res.message);
         setMode('login');
       }
     } catch (err) {
-      setError((err as Error).message);
+      toast.error((err as Error).message);
     } finally {
       setBusy(false);
     }
@@ -263,62 +293,143 @@ function Login({ onLogin }: { onLogin: () => void }) {
         </div>
       </div>
       <main className="login-main">
-        <h2>{mode === 'login' ? 'Sign in' : mode === 'signup' ? 'Create account' : 'Verify Email'}</h2>
+        <h2>{mode === 'login' ? 'Sign in' : mode === 'signup' ? 'Create account' : mode === 'setup' ? 'Set up account' : 'Verify Email'}</h2>
         <p>
           {mode === 'login' && 'Enter your email and password to access your workspace.'}
           {mode === 'signup' && 'Register for a new Medora account.'}
-          {mode === 'verify' && 'Enter the verification token sent to your email.'}
+          {mode === 'verify' && 'Enter the 6-digit OTP sent to your email.'}
+          {mode === 'setup' && 'Welcome! Please set a secure password for your new account.'}
+          {mode === 'forgot' && 'Enter your email address to receive a password reset link.'}
+          {mode === 'reset' && 'Please set a new secure password for your account.'}
         </p>
-        <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <form onSubmit={handleSubmit(onSubmit)} autoComplete="off" noValidate style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           {mode === 'signup' && (
             <>
               <div>
-                <label htmlFor="name">Full Name</label>
-                <input id="name" type="text" value={name} onChange={e => setName(e.target.value)} required />
+                <label htmlFor="name">Full Name <span style={{ color: '#ef4444' }}>*</span></label>
+                <input id="name" type="text" placeholder="E.g. Dr. Jane Doe" {...register('name', { required: 'Please provide your full name.' })} />
+                {errors.name && <div className="inline-error">{errors.name.message}</div>}
               </div>
               <div>
-                <label htmlFor="institution">Institution ID</label>
-                <input id="institution" type="text" value={institutionId} onChange={e => setInstitutionId(e.target.value)} required />
+                <label htmlFor="institution">Institution <span style={{ color: '#ef4444' }}>*</span></label>
+                <input id="institution" type="text" placeholder="E.g. Dhaka Medical College" {...register('institutionId', { required: 'Please provide your institution name.' })} />
+                {errors.institutionId && <div className="inline-error">{errors.institutionId.message}</div>}
               </div>
             </>
           )}
           
-          {(mode === 'login' || mode === 'signup') && (
+          {(mode === 'login' || mode === 'signup' || mode === 'forgot') && (
             <>
               <div>
-                <label htmlFor="email">Email</label>
-                <input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} required />
+                <label htmlFor="email">Email <span style={{ color: '#ef4444' }}>*</span></label>
+                <input id="email" type="email" placeholder="name@college.edu" {...register('email', { 
+                  required: 'Please provide your email address.',
+                  pattern: { value: /\S+@\S+\.\S+/, message: 'Please provide a valid email address.' }
+                })} />
+                {errors.email && <div className="inline-error">{errors.email.message}</div>}
               </div>
-              <div>
-                <label htmlFor="password">Password</label>
-                <input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required minLength={8} />
+              
+              {(mode === 'login' || mode === 'signup') && (
+                <div>
+                  <label htmlFor="password" style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Password <span style={{ color: '#ef4444' }}>*</span></span>
+                    {mode === 'login' && (
+                      <button type="button" className="text-link" style={{ fontSize: '12px', marginBottom: 0 }} onClick={() => { setMode('forgot'); clearErrors(); }}>
+                        Forgot password?
+                      </button>
+                    )}
+                  </label>
+                <div style={{ position: 'relative' }}>
+                  <input id="password" type={showPassword ? 'text' : 'password'} placeholder="At least 8 characters" {...register('password', { 
+                    required: 'Password is required.',
+                    minLength: mode === 'signup' ? { value: 8, message: 'Password must be at least 8 characters.' } : undefined
+                  })} style={{ paddingRight: '40px' }} />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '12px', top: '0', bottom: '0', margin: 'auto', background: 'none', border: 'none', padding: 0, color: '#90c8bb', cursor: 'pointer', display: 'flex', alignItems: 'center', height: '100%' }}>
+                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
+                {errors.password && <div className="inline-error">{errors.password.message}</div>}
               </div>
+              )}
             </>
           )}
 
           {mode === 'verify' && (
             <div>
-              <label htmlFor="token">Verification Token</label>
-              <input id="token" type="text" value={token} onChange={e => setToken(e.target.value)} required />
+              <label htmlFor="token">6-Digit OTP <span style={{ color: '#ef4444' }}>*</span></label>
+              <input id="token" type="text" placeholder="e.g. 123456" {...register('token', { 
+                required: 'Please provide the OTP.',
+                pattern: { value: /^\d{6}$/, message: 'OTP must be exactly 6 digits.' }
+              })} maxLength={6} style={{ letterSpacing: '4px', textAlign: 'center', fontSize: '18px' }} />
+              {errors.token && <div className="inline-error">{errors.token.message}</div>}
             </div>
           )}
 
-          {error && <p className="inline-error" role="alert">{error}</p>}
-          {message && <p className="form-note" style={{ color: 'green' }}>{message}</p>}
+          {mode === 'setup' && (
+            <>
+              {!setupToken && (
+                <div>
+                  <label htmlFor="token">Setup Token <span style={{ color: '#ef4444' }}>*</span></label>
+                  <input id="token" type="text" placeholder="Paste your token here" {...register('token', { required: 'Please provide the setup token.' })} />
+                  {errors.token && <div className="inline-error">{errors.token.message}</div>}
+                </div>
+              )}
+              <div>
+                <label htmlFor="password">New Password <span style={{ color: '#ef4444' }}>*</span></label>
+                <div style={{ position: 'relative' }}>
+                  <input id="password" type={showPassword ? 'text' : 'password'} placeholder="At least 8 characters" {...register('password', { 
+                    required: 'Password is required.',
+                    minLength: { value: 8, message: 'Password must be at least 8 characters.' }
+                  })} style={{ paddingRight: '40px' }} />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '12px', top: '0', bottom: '0', margin: 'auto', background: 'none', border: 'none', padding: 0, color: '#90c8bb', cursor: 'pointer', display: 'flex', alignItems: 'center', height: '100%' }}>
+                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
+                {errors.password && <div className="inline-error">{errors.password.message}</div>}
+              </div>
+            </>
+          )}
+
+          {mode === 'reset' && (
+            <>
+              {!resetToken && (
+                <div>
+                  <label htmlFor="token">Reset Token <span style={{ color: '#ef4444' }}>*</span></label>
+                  <input id="token" type="text" placeholder="Paste your reset token here" {...register('token', { required: 'Please provide the reset token.' })} />
+                  {errors.token && <div className="inline-error">{errors.token.message}</div>}
+                </div>
+              )}
+              <div>
+                <label htmlFor="password">New Password <span style={{ color: '#ef4444' }}>*</span></label>
+                <div style={{ position: 'relative' }}>
+                  <input id="password" type={showPassword ? 'text' : 'password'} placeholder="At least 8 characters" {...register('password', { 
+                    required: 'Password is required.',
+                    minLength: { value: 8, message: 'Password must be at least 8 characters.' }
+                  })} style={{ paddingRight: '40px' }} />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '12px', top: '0', bottom: '0', margin: 'auto', background: 'none', border: 'none', padding: 0, color: '#90c8bb', cursor: 'pointer', display: 'flex', alignItems: 'center', height: '100%' }}>
+                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
+                {errors.password && <div className="inline-error">{errors.password.message}</div>}
+              </div>
+            </>
+          )}
           
           <button className="primary full" disabled={busy}>
-            {busy ? 'Please wait…' : mode === 'login' ? 'Sign in' : mode === 'signup' ? 'Sign up' : 'Verify'}
+            {busy ? 'Please wait…' : mode === 'login' ? 'Sign in' : mode === 'signup' ? 'Sign up' : mode === 'setup' ? 'Set Password' : mode === 'reset' ? 'Reset Password' : mode === 'forgot' ? 'Send Reset Link' : 'Verify'}
             <ArrowRight size={18} />
           </button>
         </form>
         
-        <div style={{ marginTop: '1rem', textAlign: 'center' }}>
-          {mode === 'login' ? (
-            <p>Don't have an account? <button type="button" className="text-link" onClick={() => { setMode('signup'); setError(''); setMessage(''); }}>Sign up</button></p>
-          ) : (
-            <p>Already have an account? <button type="button" className="text-link" onClick={() => { setMode('login'); setError(''); setMessage(''); }}>Sign in</button></p>
-          )}
-        </div>
+        {(mode !== 'setup' && mode !== 'reset') && (
+          <div style={{ marginTop: '1rem', textAlign: 'center' }}>
+            {mode === 'login' ? (
+              <p>Don't have an account? <button type="button" className="text-link" onClick={() => { setMode('signup'); clearErrors(); }}>Sign up</button></p>
+            ) : (
+              <p>Already have an account? <button type="button" className="text-link" onClick={() => { setMode('login'); clearErrors(); }}>Sign in</button></p>
+            )}
+          </div>
+        )}
       </main>
     </div>
   );
@@ -554,7 +665,7 @@ function Portal() {
   const [mobile, setMobile] = useState(false);
   const me = useQuery({ queryKey: ['me'], queryFn: () => api('auth/me'), retry: false });
   const navigate = (next: string) => {
-    router.push(`/?view=${next}`);
+    router.push(`/portal?view=${next}`);
     setMobile(false);
   };
   if (me.isPending)
@@ -641,9 +752,7 @@ function Portal() {
           ))}
         </nav>
         <div className="sidebar-bottom">
-          <Link href="/institution">
-            <ExternalLink size={16} /> Institutional website
-          </Link>
+
           <div className="profile">
             <span className="avatar">
               {user.name
@@ -663,8 +772,7 @@ function Portal() {
               onClick={async () => {
                 await api('auth/logout', 'POST', {}, user.csrf);
                 client.clear();
-                router.replace('/');
-                window.location.reload();
+                window.location.href = '/';
               }}
             >
               <LogOut size={18} />

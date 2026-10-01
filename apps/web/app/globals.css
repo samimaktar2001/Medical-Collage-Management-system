@@ -55,20 +55,20 @@ p {
   color: var(--muted);
   font-size: 15px;
 }
-button,
-input,
-select,
-textarea {
+button:not([class*="Mui"]),
+input:not([class*="Mui"]),
+select:not([class*="Mui"]),
+textarea:not([class*="Mui"]) {
   font: inherit;
 }
-button,
-a,
-input,
-select,
-textarea {
+button:not([class*="Mui"]),
+a:not([class*="Mui"]),
+input:not([class*="Mui"]),
+select:not([class*="Mui"]),
+textarea:not([class*="Mui"]) {
   outline-offset: 4px;
 }
-button {
+button:not([class*="Mui"]) {
   cursor: pointer;
   border: 1px solid var(--line);
   border-radius: 7px;
@@ -77,10 +77,10 @@ button {
   padding: 9px 14px;
   font-weight: 550;
 }
-button:hover {
+button:not([class*="Mui"]):hover {
   background: #f0f5f6;
 }
-button:disabled {
+button:not([class*="Mui"]):disabled {
   cursor: not-allowed;
   opacity: 0.55;
 }
@@ -95,32 +95,50 @@ a svg {
 small {
   font-size: 12px;
 }
-label {
-  font-size: 14px;
-  font-weight: 600;
+label:not([class*="Mui"]):not([class*="MuiFormLabel"]):not([class*="MuiInputLabel"]) {
+  font-size: 13px;
+  font-weight: 650;
   display: block;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
+  color: #4b5a6c;
 }
-input,
-select,
-textarea {
+/* Only style plain unclassed inputs, not MUI components */
+input:not([class*="Mui"]):not([class*="MuiInputBase"]):not([class*="MuiOutlinedInput"]),
+select:not([class*="Mui"]):not([class*="MuiSelect"]),
+textarea:not([class*="Mui"]):not([class*="MuiInputBase"]):not([class*="MuiOutlinedInput"]) {
   border: 1px solid #ccd5df;
-  border-radius: 7px;
-  padding: 11px 12px;
+  border-radius: 9px;
+  padding: 11px 14px;
   background: white;
   color: var(--ink);
   width: 100%;
   min-width: 0;
+  transition: all 0.2s ease;
+  font-size: 14px;
 }
-textarea {
+textarea:not([class*="Mui"]):not([class*="MuiInputBase"]):not([class*="MuiOutlinedInput"]) {
   min-height: 110px;
   resize: vertical;
 }
-input:focus,
-select:focus,
-textarea:focus {
-  outline: 2px solid #0f766e55;
+input:not([class*="Mui"]):focus,
+select:not([class*="Mui"]):focus,
+textarea:not([class*="Mui"]):focus {
+  outline: none;
   border-color: var(--teal);
+}
+
+/* Explicit reset for all MUI Inputs to ensure zero double-border artifacts */
+.MuiInputBase-root input,
+.MuiInputBase-input,
+.MuiOutlinedInput-input,
+input.MuiInputBase-input,
+textarea.MuiInputBase-input,
+textarea.MuiOutlinedInput-input {
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
 }
 .primary {
   background: var(--teal);
@@ -130,6 +148,9 @@ textarea:focus {
   align-items: center;
   justify-content: center;
   gap: 9px;
+  padding: 13px 20px;
+  font-size: 15px;
+  border-radius: 9px;
 }
 .primary:hover {
   background: var(--teal-dark);
@@ -740,7 +761,10 @@ textarea:focus {
   background: white;
 }
 .login-story {
-  background: var(--navy);
+  background-color: var(--navy);
+  background-image: linear-gradient(rgba(16, 42, 67, 0.4), rgba(16, 42, 67, 0.75)), url('/images/campus-concept.png');
+  background-size: cover;
+  background-position: center;
   color: white;
   padding: 34px 60px 40px;
   display: flex;
@@ -789,6 +813,7 @@ textarea:focus {
   margin-top: 50px;
 }
 .login-main {
+  width: 100%;
   max-width: 500px;
   align-self: center;
   justify-self: center;
@@ -813,7 +838,7 @@ textarea:focus {
   line-height: 1.8;
 }
 .login-main form {
-  margin: 30px 0;
+  margin: 35px 0;
 }
 .login-main form button {
   margin-top: 20px;
@@ -849,12 +874,28 @@ textarea:focus {
   color: var(--muted);
 }
 .inline-error {
-  padding: 12px 16px;
-  border-radius: 7px;
-  background: #fff0ee;
-  color: #9d3d33;
+  color: #ef4444;
   font-size: 13px;
-  white-space: pre-line;
+  font-weight: 500;
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  animation: slideDown 0.2s ease-out;
+}
+.inline-error::before {
+  content: "";
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ef4444' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cline x1='12' y1='8' x2='12' y2='12'/%3E%3Cline x1='12' y1='16' x2='12.01' y2='16'/%3E%3C/svg%3E");
+  background-size: contain;
+  background-repeat: no-repeat;
+  flex-shrink: 0;
+}
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 .inline-success {
   padding: 12px;
@@ -1448,7 +1489,7 @@ dialog::backdrop {
 .action-form {
   margin-top: 20px;
 }
-input[type='checkbox'] {
+input[type='checkbox']:not([class*="Mui"]) {
   width: 20px;
   height: 20px;
   accent-color: var(--teal);

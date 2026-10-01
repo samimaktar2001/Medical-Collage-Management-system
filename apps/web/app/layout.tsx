@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+import { Toaster } from 'react-hot-toast';
+import ThemeRegistry from './ThemeRegistry';
 import './globals.css';
 import './custom-select.css';
 const origin = process.env.APP_ORIGIN || 'http://localhost:3000';
@@ -34,7 +36,12 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <ThemeRegistry>
+          {children}
+        </ThemeRegistry>
+        <Toaster position="top-right" toastOptions={{ style: { fontSize: '14px', borderRadius: '8px' } }} />
+      </body>
     </html>
   );
 }

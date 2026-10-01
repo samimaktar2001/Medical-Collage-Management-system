@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { z } from 'zod';
+import { uploadToS3 } from './s3';
 import { Database, SQL } from './database';
 export type Actor = {
   id: string;
@@ -161,7 +162,8 @@ export const schemas = {
     .object({
       name: text,
       mime: z.enum(['application/pdf', 'image/png', 'image/jpeg']),
-      content_base64: z.string().max(7000000),
+      content_base64: z.string().max(7000000).optional(),
+      s3_key: z.string().optional(),
     })
     .strict(),
   evidence: z.object({ title: text, period: text }).strict(),
@@ -656,6 +658,11 @@ export class Domain {
         if (!valid) fail(422, 'FILE_SIGNATURE', 'File contents do not match its declared type.');
         row.size = bytes.length;
         row.checksum = createHash('sha256').update(bytes).digest('hex');
+        
+        const s3Key = `${a.institution_id}/${row.id}`;
+        await uploadToS3(s3Key, bytes, data.mime);
+        row.s3_key = s3Key;
+        delete row.content_base64;
       }
       if (resource === 'evidence') {
         const students = (
@@ -685,7 +692,7 @@ export class Domain {
       const result = await this.insert(tx, tables[resource], row);
       await this.audit(tx, a, `${resource}.created`, row.id);
       await this.emit(tx, a, `${resource}.created`, row.id);
-      delete result.content_base64;
+      delete result.s3_key;
       return result;
     });
   }

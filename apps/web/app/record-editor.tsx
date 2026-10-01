@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Controller, useForm } from 'react-hook-form';
 import { api, Dialog, Row, viewNames } from './workspace';
 import { fields } from './resource-config';
+import { MedoraDatePicker } from './MedoraDatePicker';
 export function Editor({
   resource,
   me,
@@ -164,6 +165,43 @@ export function Editor({
                         maxLength: 10000,
                       })}
                     />
+                  ) : f.type === 'date' ? (
+                    (() => {
+                      const k = (f.key + ' ' + f.label).toLowerCase();
+                      const isPast = k.includes('issue') || k.includes('activity') || k.includes('birth') || k.includes('incident') || k.includes('joined') || k.includes('effective');
+                      const isFuture = k.includes('due') || k.includes('review') || k.includes('archive') || k.includes('available') || k.includes('expire') || k.includes('deadline');
+                      return (
+                        <Controller
+                          name={f.key}
+                          control={control}
+                          rules={{
+                            required: !f.optional ? 'This field is required.' : false,
+                            validate: (val) => {
+                              if (!val) return true;
+                              const d = new Date(val);
+                              const today = new Date();
+                              today.setHours(0, 0, 0, 0);
+                              if (isPast && d > new Date()) return 'Date cannot be in the future.';
+                              if (isFuture && d < today) return 'Date cannot be in the past.';
+                              return true;
+                            },
+                          }}
+                          render={({ field, fieldState }) => (
+                            <MedoraDatePicker
+                              id={`field-${f.key}`}
+                              label=""
+                              size="small"
+                              disableFuture={isPast}
+                              disablePast={isFuture}
+                              value={field.value || ''}
+                              onChange={field.onChange}
+                              error={!!fieldState.error}
+                              helperText={fieldState.error?.message}
+                            />
+                          )}
+                        />
+                      );
+                    })()
                   ) : (
                     <input
                       id={`field-${f.key}`}
