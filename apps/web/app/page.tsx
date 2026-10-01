@@ -162,7 +162,7 @@ export default function HomePage() {
           fetch('/api/v1/public/stats').then(res => res.json()).catch(() => ({})),
           fetch('/api/v1/public/settings').then(res => res.json()).catch(() => ({}))
         ]);
-        
+
         if (settingsRes?.data) {
           setSettings(settingsRes.data);
         }
@@ -175,7 +175,7 @@ export default function HomePage() {
             patients: statsRes.patients || 5000
           });
         }
-        
+
         if (deptRes?.items?.length > 0) {
           const defaultColors = ['#0F766E', '#007B80', '#0284C7', '#7C3AED', '#D97706', '#E11D48'];
           setDepartments(deptRes.items.map((d: any, idx: number) => ({
@@ -185,7 +185,7 @@ export default function HomePage() {
             color: defaultColors[idx % defaultColors.length]
           })));
         }
-        
+
         if (newsRes?.items?.length > 0) {
           setNewsEvents(newsRes.items.slice(0, 4).map((n: any) => {
             const date = n.published_at ? new Date(n.published_at) : new Date();
@@ -291,7 +291,7 @@ export default function HomePage() {
               >
                 {settings.heading || (
                   <>Building a <Box component="span" sx={{ color: '#2DD4BF', textShadow: '0 0 30px rgba(45,212,191,0.85), 0 2px 10px rgba(0,0,0,0.95)' }}>Healthier</Box> <br />
-                  Tomorrow</>
+                    Tomorrow</>
                 )}
               </Typography>
               <Typography sx={{ color: '#F1F5F9', fontSize: { xs: '0.95rem', md: '1.1rem', xl: '1.2rem' }, lineHeight: 1.6, maxWidth: 620, mb: 3.5, fontWeight: 500, textShadow: '0 2px 10px rgba(0,0,0,0.95)' }}>
@@ -951,35 +951,33 @@ export default function HomePage() {
         <ChatIcon />
       </IconButton>
 
-      {/* Chatbot Dialog */}
-      <Dialog
-        open={chatbotOpen}
-        onClose={() => setChatbotOpen(false)}
-        maxWidth="xs"
-        fullWidth
-        PaperProps={{
-          sx: {
+      {/* Chatbot Window */}
+      {chatbotOpen && (
+        <Paper
+          elevation={12}
+          sx={{
             position: 'fixed',
-            bottom: { xs: 0, sm: 24 },
+            bottom: { xs: 0, sm: 100 },
             right: { xs: 0, sm: 24 },
-            m: 0,
-            borderRadius: { xs: '20px 20px 0 0', sm: '20px' },
-            minHeight: 400,
-            maxHeight: 500,
-          },
-        }}
-      >
-        <Box sx={{ bgcolor: '#0F766E', color: 'white', p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Stack direction="row" spacing={1} alignItems="center">
-            <SupportAgentIcon />
-            <Typography sx={{ fontWeight: 700, fontFamily: "'Manrope', sans-serif" }}>MedicaCare Assistant</Typography>
-          </Stack>
-          <IconButton size="small" onClick={() => setChatbotOpen(false)} sx={{ color: 'white' }}>
-            <CloseIcon fontSize="small" />
-          </IconButton>
-        </Box>
-        <DialogContent sx={{ p: 0, display: 'flex', flexDirection: 'column', bgcolor: '#F8FAFC' }}>
-          <Box sx={{ flex: 1, p: 2, overflowY: 'auto' }}>
+            width: { xs: '100%', sm: 360 },
+            height: { xs: '100%', sm: 480 },
+            borderRadius: { xs: 0, sm: '20px' },
+            zIndex: 9999,
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+          }}
+        >
+          <Box sx={{ bgcolor: '#0F766E', color: 'white', p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+              <SupportAgentIcon />
+              <Typography sx={{ fontWeight: 700, fontFamily: "'Manrope', sans-serif" }}>MedicaCare Assistant</Typography>
+            </Stack>
+            <IconButton size="small" onClick={() => setChatbotOpen(false)} sx={{ color: 'white' }}>
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          </Box>
+          <Box sx={{ flex: 1, p: 2, overflowY: 'auto', bgcolor: '#F8FAFC' }}>
             <Box sx={{ display: 'flex', mb: 2 }}>
               <Box sx={{ bgcolor: '#E2E8F0', p: 1.5, borderRadius: '12px 12px 12px 0', maxWidth: '85%' }}>
                 <Typography sx={{ fontSize: '0.85rem', color: '#1E293B' }}>
@@ -1007,8 +1005,8 @@ export default function HomePage() {
               }}
             />
           </Box>
-        </DialogContent>
-      </Dialog>
+        </Paper>
+      )}
     </Box>
   );
 }
