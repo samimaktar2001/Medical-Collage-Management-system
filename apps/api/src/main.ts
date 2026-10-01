@@ -1560,9 +1560,23 @@ class HealthController {
 class AppModule { }
 async function main() {
   await db.migrate();
-  await seed(db);
-  await seedWebsite(db);
-  await seedClinical(db);
+  if (process.env.NODE_ENV !== 'production' || process.env.RUN_DEV_SEEDS === 'true') {
+    try {
+      await seed(db);
+    } catch (e: any) {
+      console.log(`[Seed Notice]: ${e.message}`);
+    }
+    try {
+      await seedWebsite(db);
+    } catch (e: any) {
+      console.log(`[Seed Notice]: ${e.message}`);
+    }
+    try {
+      await seedClinical(db);
+    } catch (e: any) {
+      console.log(`[Seed Notice]: ${e.message}`);
+    }
+  }
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     logger: ['error', 'warn'],
     bodyParser: false,
