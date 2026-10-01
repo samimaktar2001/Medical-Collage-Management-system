@@ -22,6 +22,8 @@ import Tooltip from '@mui/material/Tooltip';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import Divider from '@mui/material/Divider';
+import { StatusBadge } from '../../../StatusBadge';
+import { PageHeader } from '../../../PageHeader';
 
 // Icons
 import SearchIcon from '@mui/icons-material/Search';
@@ -137,61 +139,54 @@ export default function NotificationsPage() {
   const getSeverityChip = (severity: NotificationItem['severity']) => {
     switch (severity) {
       case 'critical':
-        return <Chip size="small" label="CRITICAL STAT" sx={{ bgcolor: '#FEE2E2', color: '#B91C1C', fontWeight: 800, fontSize: '0.65rem' }} />;
+        return <StatusBadge status="CRITICAL STAT" tone="error" />;
       case 'high':
-        return <Chip size="small" label="HIGH PRIORITY" sx={{ bgcolor: '#FFEDD5', color: '#C2410C', fontWeight: 800, fontSize: '0.65rem' }} />;
+        return <StatusBadge status="HIGH PRIORITY" tone="warning" />;
       case 'medium':
-        return <Chip size="small" label="ROUTINE" sx={{ bgcolor: '#E0E7FF', color: '#4338CA', fontWeight: 800, fontSize: '0.65rem' }} />;
+        return <StatusBadge status="ROUTINE" tone="info" />;
       default:
-        return <Chip size="small" label="INFO" sx={{ bgcolor: '#F1F5F9', color: '#475569', fontWeight: 700, fontSize: '0.65rem' }} />;
+        return <StatusBadge status="INFO" tone="neutral" />;
     }
   };
 
   return (
     <Box>
       {/* ─── Breadcrumbs & Header Section ─── */}
-      <Stack direction={{ xs: 'column', md: 'row' }} sx={{ justifyContent: 'space-between', alignItems: { md: 'center' }, gap: 2, mb: 3 }}>
-        <Box>
-          <Breadcrumbs sx={{ fontSize: '0.8125rem', mb: 0.5 }}>
-            <Link underline="hover" color="inherit" href="/portal/dashboard">
-              Communication
-            </Link>
-            <Typography color="text.primary" sx={{ fontSize: '0.8125rem', fontWeight: 600 }}>
-              Notifications
-            </Typography>
-          </Breadcrumbs>
-          <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', mb: 0.5, flexWrap: 'wrap', gap: 1 }}>
-            <Typography sx={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: { xs: '1.5rem', sm: '1.75rem', md: '1.875rem' }, color: '#0F172A', letterSpacing: '-0.025em', lineHeight: 1.2 }}>
-              Notification &amp; Clinical Alerts Center
-            </Typography>
-            {unreadCount > 0 && (
-              <Chip label={`${unreadCount} Unread`} size="small" sx={{ bgcolor: '#FEE2E2', color: '#B91C1C', fontWeight: 800 }} />
-            )}
+      <PageHeader
+        breadcrumbs={[
+          { label: 'Communication', href: '/portal/dashboard' },
+          { label: 'Notifications' },
+        ]}
+        category="Communication & Alerts"
+        title="Notification & Clinical Alerts Center"
+        description="Real-time dispatch board for statutory NMC notices, critical bedside patient alerts, laboratory panels and academic gazettes."
+        icon={<NotificationsActiveIcon />}
+        badge={
+          unreadCount > 0 ? (
+            <Chip label={`${unreadCount} Unread`} size="small" sx={{ bgcolor: '#FEE2E2', color: '#B91C1C', fontWeight: 800 }} />
+          ) : undefined
+        }
+        actions={
+          <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', flexShrink: 0, flexWrap: 'wrap', gap: 1.5 }}>
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<DoneAllIcon />}
+              onClick={markAllAsRead}
+              disabled={unreadCount === 0}
+              sx={{ textTransform: 'none', fontWeight: 700, borderColor: '#CBD5E1', color: '#0F766E', whiteSpace: 'nowrap', px: 2, py: 0.8, borderRadius: '8px' }}
+            >
+              Mark All as Read
+            </Button>
+            <Chip
+              label="Live Sync: Active"
+              size="small"
+              icon={<CheckCircleIcon sx={{ fontSize: '14px !important', color: '#059669 !important' }} />}
+              sx={{ bgcolor: '#ECFDF5', color: '#047857', fontWeight: 700, border: '1px solid #A7F3D0', py: 0.5 }}
+            />
           </Stack>
-          <Typography sx={{ color: '#64748B', fontSize: '0.925rem', lineHeight: 1.5 }}>
-            Real-time dispatch board for statutory NMC notices, critical bedside patient alerts, laboratory panels and academic gazettes.
-          </Typography>
-        </Box>
-
-        <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', flexShrink: 0, flexWrap: 'wrap', gap: 1.5 }}>
-          <Button
-            variant="outlined"
-            size="small"
-            startIcon={<DoneAllIcon />}
-            onClick={markAllAsRead}
-            disabled={unreadCount === 0}
-            sx={{ textTransform: 'none', fontWeight: 700, borderColor: '#CBD5E1', color: '#0F766E', whiteSpace: 'nowrap', px: 2, py: 0.8, borderRadius: '8px' }}
-          >
-            Mark All as Read
-          </Button>
-          <Chip
-            label="Live Sync: Active"
-            size="small"
-            icon={<CheckCircleIcon sx={{ fontSize: '14px !important', color: '#059669 !important' }} />}
-            sx={{ bgcolor: '#ECFDF5', color: '#047857', fontWeight: 700, border: '1px solid #A7F3D0', py: 0.5 }}
-          />
-        </Stack>
-      </Stack>
+        }
+      />
 
         {/* Metric KPI Cards */}
         <Grid container spacing={2.5} sx={{ mb: 3 }}>
@@ -313,7 +308,7 @@ export default function NotificationsPage() {
                   <Box sx={{ flex: 1 }}>
                     <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 0.8, flexWrap: 'wrap', gap: 0.8 }}>
                       {getSeverityChip(notif.severity)}
-                      <Chip label={notif.department} size="small" sx={{ bgcolor: '#F1F5F9', color: '#334155', fontWeight: 700, fontSize: '0.6875rem' }} />
+                      <StatusBadge status={notif.department} tone="neutral" />
                       <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: '#94A3B8' }}>
                         <AccessTimeIcon sx={{ fontSize: 13 }} />
                         <Typography sx={{ fontSize: '0.72rem' }}>{notif.timestamp}</Typography>

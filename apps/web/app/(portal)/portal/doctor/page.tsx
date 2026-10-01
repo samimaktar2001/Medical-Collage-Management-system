@@ -23,9 +23,12 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import TextField from '@mui/material/TextField';
 import MenuItem from '@mui/material/MenuItem';
+import { StatusBadge } from '../../../StatusBadge';
+import { PageHeader } from '../../../PageHeader';
 import IconButton from '@mui/material/IconButton';
 import Divider from '@mui/material/Divider';
 import Alert from '@mui/material/Alert';
+import toast from 'react-hot-toast';
 
 // Icons
 import LocalHospitalIcon from '@mui/icons-material/LocalHospital';
@@ -91,34 +94,68 @@ export default function DoctorPortalPage() {
     setQueue((prev) =>
       prev.map((p) => (p.uhid === activePatient.uhid ? { ...p, status: 'Completed' } : p))
     );
-    alert(`Prescription for ${activePatient.name} signed & dispatched to Hospital Central Pharmacy & EHR repository.`);
+    toast.success(`Prescription for ${activePatient.name} signed & dispatched to Hospital Central Pharmacy & EHR repository.`);
     setActivePatient(null);
   };
 
   return (
-    <Box sx={{ p: { xs: 2, md: 3 } }}>
-      {/* Doctor Header Banner */}
+    <Box sx={{ pb: 6 }}>
+      {/* ─── Breadcrumbs & Header ─── */}
+      <PageHeader
+        breadcrumbs={[
+          { label: 'Dashboard', href: '/portal/dashboard' },
+          { label: 'Role Workspaces', href: '/portal/roles' },
+          { label: 'Doctor Console' },
+        ]}
+        category="Clinical Workstation"
+        title="Doctor Clinical Workstation & OPD Chamber"
+        description="Live patient consultation queue, clinical diagnosis, E-Prescription writer, and IPD ward round orders."
+        icon={<LocalHospitalIcon />}
+        badge={<StatusBadge status="Clinic On-Duty" tone="teal" />}
+        actions={
+          <Button
+            variant="outlined"
+            onClick={() => toast.success('Opening Ward 4B IPD Rounds Census...')}
+            sx={{
+              borderColor: '#CBD5E1',
+              color: '#0F766E',
+              bgcolor: '#FFFFFF',
+              fontWeight: 700,
+              textTransform: 'none',
+              borderRadius: '8px',
+              px: 2,
+              '&:hover': { bgcolor: '#F0FDFA' },
+            }}
+          >
+            IPD Rounds (30 Beds)
+          </Button>
+        }
+      />
+
+      {/* Doctor Header Banner Card */}
       <Card
+        elevation={0}
         sx={{
           mb: 3,
-          borderRadius: 3.5,
-          background: 'linear-gradient(135deg, #0F172A 0%, #102A43 60%, #0F766E 100%)',
-          color: '#FFFFFF',
+          borderRadius: '16px',
+          bgcolor: '#FFFFFF',
+          border: '1px solid #E2E8F0',
           p: { xs: 2.5, md: 3 },
-          boxShadow: '0 8px 30px rgba(15, 118, 110, 0.15)',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
         }}
       >
         <Grid container spacing={2.5} sx={{ alignItems: 'center' }}>
           <Grid size={{ xs: 12, md: 'auto' }}>
             <Avatar
               sx={{
-                width: 76,
-                height: 76,
-                bgcolor: '#5EEAD4',
-                color: '#0F172A',
-                fontSize: '1.8rem',
+                width: 72,
+                height: 72,
+                bgcolor: '#F0FDFA',
+                color: '#0F766E',
+                fontSize: '1.6rem',
                 fontWeight: 800,
-                border: '3px solid rgba(255,255,255,0.2)',
+                border: '2px solid #0F766E',
+                boxShadow: '0 4px 12px rgba(15,118,110,0.15)',
               }}
             >
               SS
@@ -126,30 +163,30 @@ export default function DoctorPortalPage() {
           </Grid>
 
           <Grid size={{ xs: 12, md: 8 }}>
-            <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', mb: 0.5 }}>
-              <Typography variant="h5" sx={{ fontWeight: 800 }}>
+            <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', mb: 0.5, flexWrap: 'wrap', gap: 1 }}>
+              <Typography sx={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: { xs: '1.25rem', sm: '1.5rem' }, color: '#0F172A' }}>
                 Prof. (Dr.) Sanjoy K. Sengupta
               </Typography>
-              <Chip label="CLINIC ON-DUTY" size="small" sx={{ bgcolor: '#10B981', color: '#FFFFFF', fontWeight: 800 }} />
+              <StatusBadge status="Senior Consultant" tone="teal" />
+              <StatusBadge status="Unit 1 Head" tone="info" />
             </Stack>
-            <Typography variant="body2" sx={{ color: '#5EEAD4', fontWeight: 600 }}>
+            <Typography sx={{ color: '#0F766E', fontWeight: 700, fontSize: '0.875rem' }}>
               HOD &amp; Senior Consultant Physician • Department of General Medicine
             </Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', display: 'block', mt: 0.5 }}>
-              Council Registration: WBMC-48192 • OPD Chamber: Room 102 • Unit 1 Head
+            <Typography sx={{ color: '#64748B', fontSize: '0.8125rem', mt: 0.5 }}>
+              Council Registration: <strong>WBMC-48192</strong> • OPD Chamber: <strong>Room 102</strong> • Timing: <strong>09:00 AM – 02:00 PM</strong>
             </Typography>
           </Grid>
 
           <Grid size={{ xs: 12, md: 'auto' }} sx={{ ml: { md: 'auto' } }}>
-            <Stack direction="row" spacing={1}>
-              <Button
-                variant="outlined"
-                sx={{ color: '#FFFFFF', borderColor: 'rgba(255,255,255,0.3)', textTransform: 'none' }}
-                onClick={() => alert('Opening Ward 4B IPD Rounds Census...')}
-              >
-                IPD Rounds (30 Beds)
-              </Button>
-            </Stack>
+            <Paper elevation={0} sx={{ p: 1.5, px: 2.5, borderRadius: '12px', border: '1px solid #E2E8F0', bgcolor: '#F8FAFC', textAlign: 'center' }}>
+              <Typography sx={{ fontSize: '0.6875rem', color: '#64748B', fontWeight: 700, textTransform: 'uppercase' }}>
+                Consultation Status
+              </Typography>
+              <Typography sx={{ fontSize: '0.875rem', fontWeight: 800, color: '#059669', mt: 0.3 }}>
+                Active Chamber
+              </Typography>
+            </Paper>
           </Grid>
         </Grid>
       </Card>
@@ -255,16 +292,7 @@ export default function DoctorPortalPage() {
                   <TableCell sx={{ fontSize: '0.8125rem', color: '#334155' }}>{pt.vitals}</TableCell>
                   <TableCell sx={{ fontSize: '0.8125rem', color: '#475569', maxWidth: 260 }}>{pt.chiefComplaint}</TableCell>
                   <TableCell>
-                    <Chip
-                      label={pt.status}
-                      size="small"
-                      sx={{
-                        fontWeight: 700,
-                        fontSize: '0.7rem',
-                        bgcolor: pt.status === 'Completed' ? '#ECFDF5' : '#FEF3C7',
-                        color: pt.status === 'Completed' ? '#059669' : '#D97706',
-                      }}
-                    />
+                    <StatusBadge status={pt.status} />
                   </TableCell>
                   <TableCell sx={{ textAlign: 'right' }}>
                     {pt.status !== 'Completed' ? (
@@ -282,7 +310,7 @@ export default function DoctorPortalPage() {
                         variant="outlined"
                         size="small"
                         startIcon={<PrintIcon />}
-                        onClick={() => alert(`Printing signed Rx for ${pt.name}`)}
+                        onClick={() => toast.success(`Printing signed Rx for ${pt.name}`)}
                         sx={{ textTransform: 'none', fontSize: '0.75rem' }}
                       >
                         View Rx
@@ -306,10 +334,10 @@ export default function DoctorPortalPage() {
       >
         {activePatient && (
           <>
-            <DialogTitle sx={{ pb: 1, bgcolor: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
+            <DialogTitle component="div" sx={{ pb: 1, bgcolor: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
               <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
                 <Box>
-                  <Typography variant="h6" sx={{ fontWeight: 800, color: '#0F172A' }}>
+                  <Typography component="span" variant="h6" sx={{ fontWeight: 800, color: '#0F172A', display: 'block' }}>
                     Clinical Consultation: {activePatient.name} ({activePatient.ageGender})
                   </Typography>
                   <Typography variant="caption" sx={{ color: '#64748B' }}>

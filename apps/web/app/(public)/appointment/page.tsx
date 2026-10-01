@@ -23,6 +23,7 @@ import {
   Chip,
   Avatar,
 } from '@mui/material';
+import toast from 'react-hot-toast';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import EventAvailableIcon from '@mui/icons-material/EventAvailable';
 import PersonIcon from '@mui/icons-material/Person';
@@ -112,6 +113,7 @@ export default function AppointmentPage() {
       if (!res.ok) {
         throw new Error(result.message || result.error?.message || 'Unable to book appointment.');
       }
+      toast.success(`Appointment confirmed! Token: ${result.data.tokenNumber}`);
       setTokenInfo({
         tokenNumber: result.data.tokenNumber,
         opdSlipId: result.data.opdSlipId,
@@ -119,6 +121,7 @@ export default function AppointmentPage() {
       });
       setActiveStep(2);
     } catch (err: any) {
+      toast.error(err.message || 'Unable to connect to server. Please try again.');
       setErrorMsg(err.message || 'Unable to connect to server. Please try again.');
     } finally {
       setSubmitting(false);
@@ -195,31 +198,60 @@ export default function AppointmentPage() {
 
       {/* Main Container */}
       <Container maxWidth={false} sx={{ maxWidth: '1840px', px: { xs: 2, sm: 3, md: 4, xl: 6 }, py: { xs: 4, md: 6 } }}>
-        <Grid container spacing={4}>
-          {/* Left Column: Booking Stepper and Form */}
-          <Grid size={{ xs: 12, lg: 8, xl: 8.5 }}>
+        <Grid container spacing={4} sx={{ alignItems: 'flex-start' }}>
+          {/* Left Column: Booking Stepper and Form (Sticky during scrolling) */}
+          <Grid size={{ xs: 12, lg: 8, xl: 8.5 }} sx={{ position: { md: 'sticky' }, top: { md: 104 }, zIndex: 10, alignSelf: 'flex-start' }}>
             {/* Stepper Card */}
-            <Card sx={{ p: { xs: 2.5, md: 4 }, borderRadius: '12px', border: '1px solid #E2E8F0', mb: 4, boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
-              <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 4 }}>
-                {STEPS.map((label) => (
-                  <Step key={label}>
-                    <StepLabel
-                      slotProps={{
-                        stepIcon: {
-                          sx: {
-                            '&.Mui-active': { color: '#0F766E' },
-                            '&.Mui-completed': { color: '#0F766E' },
+            <Card
+              sx={{
+                p: { xs: 2.5, md: 4 },
+                borderRadius: '12px',
+                border: '1px solid #E2E8F0',
+                mb: 4,
+                boxShadow: '0 4px 20px rgba(0,0,0,0.03)',
+                maxHeight: { md: 'calc(100vh - 124px)' },
+                overflowY: { md: 'auto' },
+              }}
+            >
+              {/* Stepper Progress Bar */}
+              <Box
+                sx={{
+                  position: 'sticky',
+                  top: 0,
+                  zIndex: 10,
+                  bgcolor: '#FFFFFF',
+                  pt: { xs: 1.5, md: 2 },
+                  pb: { xs: 1.5, md: 2 },
+                  px: { xs: 2, md: 3 },
+                  mx: { xs: -2.5, md: -4 },
+                  mt: { xs: -2.5, md: -4 },
+                  mb: 3.5,
+                  borderBottom: '1px solid #E2E8F0',
+                  borderRadius: '12px 12px 0 0',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+                }}
+              >
+                <Stepper activeStep={activeStep} alternativeLabel>
+                  {STEPS.map((label) => (
+                    <Step key={label}>
+                      <StepLabel
+                        slotProps={{
+                          stepIcon: {
+                            sx: {
+                              '&.Mui-active': { color: '#0F766E' },
+                              '&.Mui-completed': { color: '#0F766E' },
+                            },
                           },
-                        },
-                      }}
-                    >
-                      <Typography variant="caption" sx={{ fontWeight: 700, color: '#334155' }}>
-                        {label}
-                      </Typography>
-                    </StepLabel>
-                  </Step>
-                ))}
-              </Stepper>
+                        }}
+                      >
+                        <Typography variant="caption" sx={{ fontWeight: 700, color: '#334155' }}>
+                          {label}
+                        </Typography>
+                      </StepLabel>
+                    </Step>
+                  ))}
+                </Stepper>
+              </Box>
 
               {/* Step 1: Department & Doctor */}
               {activeStep === 0 && (

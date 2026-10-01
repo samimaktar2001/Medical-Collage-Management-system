@@ -17,8 +17,11 @@ import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
+import TablePagination from '@mui/material/TablePagination';
 import Paper from '@mui/material/Paper';
 import TextField from '@mui/material/TextField';
+import InputAdornment from '@mui/material/InputAdornment';
+import Select from '@mui/material/Select';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
@@ -27,6 +30,11 @@ import MenuItem from '@mui/material/MenuItem';
 import Alert from '@mui/material/Alert';
 import Divider from '@mui/material/Divider';
 import IconButton from '@mui/material/IconButton';
+import Tooltip from '@mui/material/Tooltip';
+import toast from 'react-hot-toast';
+import { StatusBadge } from '../../../StatusBadge';
+import { PageHeader } from '../../../PageHeader';
+import { useConfirm } from '../../../ConfirmDialog';
 
 // Icons
 import LanguageIcon from '@mui/icons-material/Language';
@@ -39,6 +47,9 @@ import AddCircleIcon from '@mui/icons-material/AddCircle';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import SearchIcon from '@mui/icons-material/Search';
+import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
+import LaunchIcon from '@mui/icons-material/Launch';
 
 // Mock Pages Data
 const INITIAL_PAGES = [
@@ -48,9 +59,12 @@ const INITIAL_PAGES = [
   { id: 'pg-4', title: '750-Bed Teaching Hospital Services', slug: '/hospital', status: 'Published', lastUpdated: '27 Sep 2026', views: '32,100' },
   { id: 'pg-5', title: 'Campus Facilities & Simulation Lab', slug: '/facilities', status: 'Published', lastUpdated: '20 Sep 2026', views: '9,800' },
   { id: 'pg-6', title: 'Admissions & NEET Cut-Off Matrix', slug: '/admissions', status: 'Published', lastUpdated: '29 Sep 2026', views: '45,600' },
+  { id: 'pg-7', title: 'Fee Structure & Scholarships', slug: '/fees', status: 'Published', lastUpdated: '24 Sep 2026', views: '21,300' },
+  { id: 'pg-8', title: 'Central Research Facility & Labs', slug: '/research', status: 'Draft', lastUpdated: '22 Sep 2026', views: '3,400' },
 ];
 
 export default function CMSAdminPage() {
+  const confirm = useConfirm();
   const [tabIndex, setTabIndex] = useState(0);
 
   // Hero Section State
@@ -63,10 +77,22 @@ export default function CMSAdminPage() {
   const [openPageModal, setOpenPageModal] = useState(false);
   const [newPage, setNewPage] = useState({ title: '', slug: '', status: 'Published' });
 
+  // Search, Filter & Pagination
+  const [pageSearch, setPageSearch] = useState('');
+  const [pageStatusFilter, setPageStatusFilter] = useState('ALL');
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+
+  // View & Edit Modals
+  const [viewPage, setViewPage] = useState<any | null>(null);
+  const [editPage, setEditPage] = useState<any | null>(null);
+  const [editPageForm, setEditPageForm] = useState<any>({});
+
   const handleSaveHero = (e: React.FormEvent) => {
     e.preventDefault();
     setSavedBannerAlert(true);
     setTimeout(() => setSavedBannerAlert(false), 4000);
+    toast.success('Hero section banner updated successfully');
   };
 
   const handleAddPage = (e: React.FormEvent) => {
@@ -85,52 +111,78 @@ export default function CMSAdminPage() {
     ]);
     setOpenPageModal(false);
     setNewPage({ title: '', slug: '', status: 'Published' });
+    toast.success('New page created successfully');
   };
 
-  const handleDeletePage = (id: string) => {
-    if (confirm('Are you sure you want to unpublish and archive this page?')) {
+  const handleOpenEdit = (p: any) => {
+    setEditPage(p);
+    setEditPageForm({ ...p });
+  };
+
+  const handleSaveEdit = () => {
+    if (!editPage) return;
+    setPages(pages.map((p) => (p.id === editPage.id ? { ...p, ...editPageForm } : p)));
+    toast.success(`Page ${editPageForm.title} updated successfully.`);
+    setEditPage(null);
+  };
+
+  const handleDeletePage = async (id: string) => {
+    const ok = await confirm({
+      title: 'Unpublish & Archive Page',
+      message: 'Are you sure you want to unpublish and archive this page? This will remove it from the public portal.',
+      confirmText: 'Unpublish & Archive',
+      severity: 'error',
+    });
+    if (ok) {
       setPages(pages.filter((p) => p.id !== id));
+      toast.success('Page unpublished and archived successfully');
     }
   };
 
-  return (
-    <Box sx={{ p: { xs: 2, md: 3 } }}>
-      {/* CMS Header Banner */}
-      <Card
-        sx={{
-          mb: 3,
-          borderRadius: 3.5,
-          background: 'linear-gradient(135deg, #0F172A 0%, #102A43 60%, #0F766E 100%)',
-          color: '#FFFFFF',
-          p: { xs: 2.5, md: 3 },
-          boxShadow: '0 8px 30px rgba(15, 118, 110, 0.15)',
-        }}
-      >
-        <Grid container spacing={2} sx={{ alignItems: 'center' }}>
-          <Grid size={{ xs: 12, md: 8 }}>
-            <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', mb: 0.5 }}>
-              <LanguageIcon sx={{ color: '#5EEAD4', fontSize: 32 }} />
-              <Typography variant="h5" sx={{ fontWeight: 800 }}>
-                Institutional CMS &amp; Content Management Studio
-              </Typography>
-            </Stack>
-            <Typography variant="body2" sx={{ color: '#5EEAD4' }}>
-              Manage public website typography, banners, academic course syllabus, notices, and NMC regulatory gazettes.
-            </Typography>
-          </Grid>
+  const filteredPages = pages.filter((p) => {
+    if (pageStatusFilter !== 'ALL' && p.status !== pageStatusFilter) return false;
+    if (!pageSearch.trim()) return true;
+    const q = pageSearch.toLowerCase();
+    return p.title.toLowerCase().includes(q) || p.slug.toLowerCase().includes(q);
+  });
 
-          <Grid size={{ xs: 12, md: 4 }} sx={{ textAlign: { md: 'right' } }}>
-            <Button
-              variant="contained"
-              href="/"
-              target="_blank"
-              sx={{ bgcolor: '#5EEAD4', color: '#0F172A', fontWeight: 700, textTransform: 'none', '&:hover': { bgcolor: '#99F6E4' } }}
-            >
-              Open Live Public Website ↗
-            </Button>
-          </Grid>
-        </Grid>
-      </Card>
+  const paginatedPages = filteredPages.slice(page * rowsPerPage, (page + 1) * rowsPerPage);
+
+  return (
+    <Box sx={{ pb: 6 }}>
+      {/* ─── Breadcrumbs & Header ─── */}
+      <PageHeader
+        breadcrumbs={[
+          { label: 'Dashboard', href: '/portal/dashboard' },
+          { label: 'Role Workspaces', href: '/portal/roles' },
+          { label: 'CMS Studio' },
+        ]}
+        category="Content & Public Communications"
+        title="Institutional CMS & Content Management Studio"
+        description="Manage public website typography, banners, academic course syllabus, notices, and NMC regulatory gazettes."
+        icon={<LanguageIcon />}
+        badge={<StatusBadge status="Live Public Sync" tone="teal" />}
+        actions={
+          <Button
+            variant="contained"
+            href="/"
+            target="_blank"
+            sx={{
+              bgcolor: '#0F766E',
+              color: '#ffffffff !important',
+              fontWeight: 700,
+              textTransform: 'none',
+              borderRadius: '8px',
+              px: 2.5,
+              py: 0.9,
+              boxShadow: '0 2px 6px rgba(15,118,110,0.2)',
+              '&:hover': { bgcolor: '#0D6861' },
+            }}
+          >
+            Open Live Public Website ↗
+          </Button>
+        }
+      />
 
       {/* Tabs */}
       <Paper sx={{ mb: 3, borderRadius: 3, overflow: 'hidden' }}>
@@ -218,7 +270,7 @@ export default function CMSAdminPage() {
         {/* Tab 1: Pages Manager */}
         {tabIndex === 1 && (
           <Box sx={{ p: 3 }}>
-            <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ justifyContent: 'space-between', alignItems: { sm: 'center' }, mb: 2.5 }}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ justifyContent: 'space-between', alignItems: { sm: 'center' }, mb: 2.5, gap: 2 }}>
               <Box>
                 <Typography variant="h6" sx={{ fontWeight: 800, color: '#0F172A' }}>
                   Managed Public Pages &amp; Content Nodes
@@ -232,10 +284,46 @@ export default function CMSAdminPage() {
                 variant="contained"
                 startIcon={<AddCircleIcon />}
                 onClick={() => setOpenPageModal(true)}
-                sx={{ bgcolor: '#0F766E', fontWeight: 700, textTransform: 'none', '&:hover': { bgcolor: '#115E59' } }}
+                sx={{ bgcolor: '#0F766E', fontWeight: 700, textTransform: 'none', '&:hover': { bgcolor: '#115E59' }, whiteSpace: 'nowrap' }}
               >
                 Create New Page
               </Button>
+            </Stack>
+
+            {/* Filter Bar */}
+            <Stack direction="row" spacing={2} sx={{ mb: 2, alignItems: 'center' }}>
+              <TextField
+                size="small"
+                placeholder="Search page title or URL slug..."
+                value={pageSearch}
+                onChange={(e) => {
+                  setPageSearch(e.target.value);
+                  setPage(0);
+                }}
+                sx={{ flex: 1, maxWidth: 350 }}
+                slotProps={{
+                  input: {
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon sx={{ color: '#94A3B8', fontSize: 18 }} />
+                      </InputAdornment>
+                    ),
+                  },
+                }}
+              />
+              <Select
+                size="small"
+                value={pageStatusFilter}
+                onChange={(e) => {
+                  setPageStatusFilter(e.target.value);
+                  setPage(0);
+                }}
+                sx={{ height: 40, minWidth: 140, fontSize: '0.8125rem' }}
+              >
+                <MenuItem value="ALL">All Statuses</MenuItem>
+                <MenuItem value="Published">Published</MenuItem>
+                <MenuItem value="Draft">Draft</MenuItem>
+              </Select>
             </Stack>
 
             <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #E2E8F0', borderRadius: 2 }}>
@@ -247,40 +335,69 @@ export default function CMSAdminPage() {
                     <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
                     <TableCell sx={{ fontWeight: 700 }}>Last Modified</TableCell>
                     <TableCell sx={{ fontWeight: 700 }}>Monthly Views</TableCell>
-                    <TableCell sx={{ fontWeight: 700, textAlign: 'right' }}>Actions</TableCell>
+                    <TableCell sx={{ fontWeight: 700, textAlign: 'right', minWidth: 160 }}>Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {pages.map((p) => (
-                    <TableRow key={p.id} hover>
-                      <TableCell sx={{ fontWeight: 700, color: '#0F172A' }}>{p.title}</TableCell>
-                      <TableCell sx={{ color: '#0F766E', fontWeight: 600 }}>{p.slug}</TableCell>
-                      <TableCell>
-                        <Chip
-                          label={p.status}
-                          size="small"
-                          sx={{
-                            fontWeight: 700,
-                            bgcolor: p.status === 'Published' ? '#ECFDF5' : '#FFFBEB',
-                            color: p.status === 'Published' ? '#059669' : '#D97706',
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell sx={{ color: '#64748B' }}>{p.lastUpdated}</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>{p.views}</TableCell>
-                      <TableCell sx={{ textAlign: 'right' }}>
-                        <Button size="small" href={p.slug} target="_blank" sx={{ textTransform: 'none', mr: 1 }}>
-                          View
-                        </Button>
-                        <IconButton size="small" onClick={() => handleDeletePage(p.id)} sx={{ color: '#EF4444' }}>
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
+                  {paginatedPages.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} align="center" sx={{ py: 4, color: '#64748B' }}>
+                        No pages match your filter query.
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : (
+                    paginatedPages.map((p) => (
+                      <TableRow key={p.id} hover>
+                        <TableCell sx={{ fontWeight: 700, color: '#0F172A' }}>{p.title}</TableCell>
+                        <TableCell sx={{ color: '#0F766E', fontWeight: 600 }}>{p.slug}</TableCell>
+                        <TableCell>
+                          <StatusBadge status={p.status} />
+                        </TableCell>
+                        <TableCell sx={{ color: '#64748B' }}>{p.lastUpdated}</TableCell>
+                        <TableCell sx={{ fontWeight: 600 }}>{p.views}</TableCell>
+                        <TableCell sx={{ textAlign: 'right' }}>
+                          <Stack direction="row" spacing={0.5} sx={{ justifyContent: 'flex-end', alignItems: 'center' }}>
+                            <Tooltip title="View Page Info">
+                              <IconButton size="small" onClick={() => setViewPage(p)} sx={{ color: '#0F766E' }}>
+                                <VisibilityOutlinedIcon sx={{ fontSize: 18 }} />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Open Page in Browser">
+                              <IconButton size="small" href={p.slug} target="_blank" sx={{ color: '#64748B' }}>
+                                <LaunchIcon sx={{ fontSize: 18 }} />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Edit Page">
+                              <IconButton size="small" onClick={() => handleOpenEdit(p)} sx={{ color: '#0284C7' }}>
+                                <EditIcon sx={{ fontSize: 18 }} />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Archive Page">
+                              <IconButton size="small" onClick={() => handleDeletePage(p.id)} sx={{ color: '#EF4444' }}>
+                                <DeleteIcon sx={{ fontSize: 18 }} />
+                              </IconButton>
+                            </Tooltip>
+                          </Stack>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </TableContainer>
+
+            <TablePagination
+              component="div"
+              count={filteredPages.length}
+              page={page}
+              onPageChange={(_, newPage) => setPage(newPage)}
+              rowsPerPage={rowsPerPage}
+              onRowsPerPageChange={(e) => {
+                setRowsPerPage(parseInt(e.target.value, 10));
+                setPage(0);
+              }}
+              rowsPerPageOptions={[5, 10, 25, 50]}
+            />
           </Box>
         )}
 
@@ -311,8 +428,8 @@ export default function CMSAdminPage() {
                         {m.type} • {m.size} • Uploaded {m.date}
                       </Typography>
                     </Box>
-                    <Button size="small" onClick={() => alert(`Copied CDN URL: https://cdn.medicacare.edu.in/media/${m.name}`)}>
-                      Copy URL
+                    <Button size="small" variant="outlined" onClick={() => toast.success(`Viewing asset ${m.name}`)} sx={{ textTransform: 'none' }}>
+                      Preview
                     </Button>
                   </Card>
                 </Grid>
@@ -325,31 +442,29 @@ export default function CMSAdminPage() {
         {tabIndex === 3 && (
           <Box sx={{ p: 3 }}>
             <Typography variant="h6" sx={{ fontWeight: 800, color: '#0F172A', mb: 1 }}>
-              National Medical Commission (NMC) Statutory Disclosures
+              NMC Mandatory Statutory Disclosures (CBME Clause 3.2)
             </Typography>
             <Typography variant="body2" sx={{ color: '#64748B', mb: 3 }}>
-              Mandatory disclosures under Section 28 of NMC Act 2019 displayed publicly for annual inspections.
+              Live public disclosures required for annual college inspection and NMC assessment portals.
             </Typography>
 
             <Stack spacing={2}>
               {[
-                { title: 'NMC Form-1: Clinical Material & Bed Occupancy Census (Daily)', status: 'Live Synced from HIS', updated: 'Today, 06:00 AM' },
-                { title: 'Biometric Faculty Attendance System (AEBAS) Compliance Record', status: 'Live Verified', updated: 'Today, 08:30 AM' },
-                { title: 'CCTV Camera Live Streaming Feeds to NMC Command Centre', status: 'All 25 Streams Active', updated: 'Active' },
-                { title: 'Anti-Ragging Committee & Squad Composition Notification 2026', status: 'Published', updated: '15 Sep 2026' },
-              ].map((item, idx) => (
-                <Card key={idx} sx={{ p: 2.5, borderRadius: 2, borderLeft: '4px solid #0F766E', bgcolor: '#F8FAFC' }}>
-                  <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ justifyContent: 'space-between', alignItems: { sm: 'center' } }}>
-                    <Box>
-                      <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#0F172A' }}>
-                        {item.title}
-                      </Typography>
-                      <Typography variant="caption" sx={{ color: '#64748B' }}>
-                        Status: <strong>{item.status}</strong> • Last Verified: {item.updated}
-                      </Typography>
-                    </Box>
-                    <Chip label="COMPLIANT" size="small" sx={{ bgcolor: '#ECFDF5', color: '#059669', fontWeight: 800, mt: { xs: 1, sm: 0 } }} />
-                  </Stack>
+                { title: 'NMC Form 1: Teaching Faculty Biometric Attendance (AEBAS)', status: 'Live Sync Active', date: 'Refreshed 10 mins ago' },
+                { title: 'NMC Form 2: Clinical Hospital Bed Occupancy & OPD Statistics', status: 'Live Sync Active', date: 'Refreshed 15 mins ago' },
+                { title: 'NMC Form 3: Annual Intake Seat Matrix (MBBS 150 Seats & MD/MS 45 Seats)', status: 'Approved', date: 'Refreshed 24 Sep 2026' },
+                { title: 'NMC Form 4: Anti-Ragging Committee & Gender Harassment Internal Redressal', status: 'Gazetted', date: 'Refreshed 20 Sep 2026' },
+              ].map((doc, idx) => (
+                <Card key={idx} sx={{ p: 2.5, borderRadius: 2, border: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Box>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#0F172A' }}>
+                      {doc.title}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: '#64748B' }}>
+                      {doc.date}
+                    </Typography>
+                  </Box>
+                  <StatusBadge status={doc.status} />
                 </Card>
               ))}
             </Stack>
@@ -357,15 +472,189 @@ export default function CMSAdminPage() {
         )}
       </Paper>
 
-      {/* Add Page Modal */}
+      {/* ─── View Page Modal ─── */}
       <Dialog
-        open={openPageModal}
-        onClose={() => setOpenPageModal(false)}
+        open={Boolean(viewPage)}
+        onClose={() => setViewPage(null)}
+        maxWidth="md"
+        fullWidth
+        slotProps={{
+          paper: {
+            sx: {
+              borderRadius: '20px',
+              maxWidth: '720px',
+              width: '100%',
+              boxShadow: '0 24px 48px -12px rgba(15, 23, 42, 0.18)',
+              overflow: 'hidden',
+            },
+          },
+        }}
+      >
+        {viewPage && (
+          <>
+            <DialogTitle
+              component="div"
+              sx={{
+                p: 3,
+                pb: 2,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                bgcolor: '#FFFFFF',
+              }}
+            >
+              <Box>
+                <Typography
+                  component="span"
+                  variant="h6"
+                  sx={{
+                    fontWeight: 800,
+                    fontFamily: "'Manrope', sans-serif",
+                    fontSize: '1.25rem',
+                    color: '#0F172A',
+                    display: 'block',
+                  }}
+                >
+                  {viewPage.title}
+                </Typography>
+                <Typography variant="body2" sx={{ color: '#64748B', fontFamily: "'Manrope', sans-serif", fontSize: '0.825rem', mt: 0.25 }}>
+                  Institutional CMS Page Dossier
+                </Typography>
+              </Box>
+              <StatusBadge status={viewPage.status} size="medium" />
+            </DialogTitle>
+            <Divider sx={{ borderColor: '#F1F5F9' }} />
+            <DialogContent sx={{ p: 3, bgcolor: '#FAFAFB' }}>
+              <Grid container spacing={2}>
+                <Grid size={{ xs: 12, sm: 6 }} sx={{ minWidth: 0 }}>
+                  <Box sx={{ p: 2, bgcolor: '#FFFFFF', borderRadius: '12px', border: '1px solid #E2E8F0', height: '100%', minWidth: 0, overflow: 'hidden' }}>
+                    <Typography sx={{ fontFamily: "'Manrope', sans-serif", fontSize: '0.75rem', color: '#64748B', fontWeight: 600, mb: 0.75 }}>
+                      URL Route
+                    </Typography>
+                    <Typography sx={{ fontFamily: "'Manrope', sans-serif", fontWeight: 700, fontSize: '0.95rem', color: '#0F766E', wordBreak: 'break-all', overflowWrap: 'anywhere' }}>
+                      {viewPage.slug}
+                    </Typography>
+                  </Box>
+                </Grid>
+                <Grid size={{ xs: 12, sm: 6 }} sx={{ minWidth: 0 }}>
+                  <Box sx={{ p: 2, bgcolor: '#FFFFFF', borderRadius: '12px', border: '1px solid #E2E8F0', height: '100%', minWidth: 0, overflow: 'hidden' }}>
+                    <Typography sx={{ fontFamily: "'Manrope', sans-serif", fontSize: '0.75rem', color: '#64748B', fontWeight: 600, mb: 0.75 }}>
+                      Publish Status
+                    </Typography>
+                    <StatusBadge status={viewPage.status} size="medium" />
+                  </Box>
+                </Grid>
+                <Grid size={{ xs: 12, sm: 6 }} sx={{ minWidth: 0 }}>
+                  <Box sx={{ p: 2, bgcolor: '#FFFFFF', borderRadius: '12px', border: '1px solid #E2E8F0', height: '100%', minWidth: 0, overflow: 'hidden' }}>
+                    <Typography sx={{ fontFamily: "'Manrope', sans-serif", fontSize: '0.75rem', color: '#64748B', fontWeight: 600, mb: 0.75 }}>
+                      Last Modified Date
+                    </Typography>
+                    <Typography sx={{ fontFamily: "'Manrope', sans-serif", fontWeight: 700, fontSize: '0.925rem', color: '#0F172A' }}>
+                      {viewPage.lastUpdated}
+                    </Typography>
+                  </Box>
+                </Grid>
+                <Grid size={{ xs: 12, sm: 6 }} sx={{ minWidth: 0 }}>
+                  <Box sx={{ p: 2, bgcolor: '#FFFFFF', borderRadius: '12px', border: '1px solid #E2E8F0', height: '100%', minWidth: 0, overflow: 'hidden' }}>
+                    <Typography sx={{ fontFamily: "'Manrope', sans-serif", fontSize: '0.75rem', color: '#64748B', fontWeight: 600, mb: 0.75 }}>
+                      Monthly Traffic
+                    </Typography>
+                    <Typography sx={{ fontFamily: "'Manrope', sans-serif", fontWeight: 700, fontSize: '0.925rem', color: '#0F172A' }}>
+                      {viewPage.views.toLocaleString()} Pageviews
+                    </Typography>
+                  </Box>
+                </Grid>
+              </Grid>
+            </DialogContent>
+            <Divider sx={{ borderColor: '#F1F5F9' }} />
+            <DialogActions sx={{ p: 2.5, px: 3, justifyContent: 'space-between', bgcolor: '#FFFFFF' }}>
+              <Button onClick={() => setViewPage(null)} sx={{ textTransform: 'none', color: '#64748B', fontFamily: "'Manrope', sans-serif", fontWeight: 600 }}>
+                Close
+              </Button>
+              <Button
+                variant="contained"
+                href={viewPage.slug}
+                target="_blank"
+                sx={{
+                  textTransform: 'none',
+                  fontWeight: 700,
+                  fontFamily: "'Manrope', sans-serif",
+                  bgcolor: '#0F766E',
+                  borderRadius: '10px',
+                  px: 2.5,
+                  py: 1,
+                  boxShadow: '0 2px 8px rgba(15, 118, 110, 0.25)',
+                  '&:hover': { bgcolor: '#115E59' },
+                }}
+              >
+                Open Page ↗
+              </Button>
+            </DialogActions>
+          </>
+        )}
+      </Dialog>
+
+      {/* ─── Edit Page Modal ─── */}
+      <Dialog
+        open={Boolean(editPage)}
+        onClose={() => setEditPage(null)}
         maxWidth="sm"
         fullWidth
-        slotProps={{ paper: { sx: { borderRadius: 3, p: 1 } } }}
+        slotProps={{ paper: { sx: { borderRadius: '16px', p: 1 } } }}
       >
-        <DialogTitle sx={{ fontWeight: 800 }}>Create New Public Web Page</DialogTitle>
+        {editPage && (
+          <>
+            <DialogTitle sx={{ fontWeight: 800, color: '#0F172A' }}>
+              Edit Page Metadata ({editPage.slug})
+            </DialogTitle>
+            <DialogContent dividers>
+              <Stack spacing={2} sx={{ mt: 1 }}>
+                <TextField
+                  label="Page Title"
+                  size="small"
+                  fullWidth
+                  value={editPageForm.title || ''}
+                  onChange={(e) => setEditPageForm({ ...editPageForm, title: e.target.value })}
+                />
+                <TextField
+                  label="URL Route Slug"
+                  size="small"
+                  fullWidth
+                  value={editPageForm.slug || ''}
+                  onChange={(e) => setEditPageForm({ ...editPageForm, slug: e.target.value })}
+                />
+                <Select
+                  size="small"
+                  fullWidth
+                  value={editPageForm.status || 'Published'}
+                  onChange={(e) => setEditPageForm({ ...editPageForm, status: e.target.value })}
+                >
+                  <MenuItem value="Published">Published</MenuItem>
+                  <MenuItem value="Draft">Draft</MenuItem>
+                </Select>
+              </Stack>
+            </DialogContent>
+            <DialogActions sx={{ p: 2, justifyContent: 'flex-end', gap: 1 }}>
+              <Button onClick={() => setEditPage(null)} sx={{ textTransform: 'none', color: '#64748B' }}>
+                Cancel
+              </Button>
+              <Button
+                variant="contained"
+                onClick={handleSaveEdit}
+                sx={{ textTransform: 'none', fontWeight: 700, bgcolor: '#0F766E', '&:hover': { bgcolor: '#115E59' } }}
+              >
+                Save Changes
+              </Button>
+            </DialogActions>
+          </>
+        )}
+      </Dialog>
+
+      {/* Modal: Create Page */}
+      <Dialog open={openPageModal} onClose={() => setOpenPageModal(false)} maxWidth="sm" fullWidth slotProps={{ paper: { sx: { borderRadius: '14px' } } }}>
+        <DialogTitle sx={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800 }}>
+          Create New Institutional Page
+        </DialogTitle>
         <DialogContent dividers>
           <Box component="form" onSubmit={handleAddPage} sx={{ pt: 1 }}>
             <TextField

@@ -27,6 +27,9 @@ import DialogActions from '@mui/material/DialogActions';
 import TextField from '@mui/material/TextField';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { MedoraDataGridPagination } from '../../../Pagination';
+import { StatusBadge } from '../../../StatusBadge';
+import { PageHeader } from '../../../PageHeader';
+import toast from 'react-hot-toast';
 
 // Icons
 import HotelIcon from '@mui/icons-material/Hotel';
@@ -142,7 +145,7 @@ export default function IpdManagementPage() {
     if (!newAdmission.patientName) return;
     const targetBedId = selectedBedForAdmit ? selectedBedForAdmit.id : beds.find((b) => b.status === 'Available')?.id;
     if (!targetBedId) {
-      alert('No available bed selected!');
+      toast.error('No available bed selected!');
       return;
     }
 
@@ -221,23 +224,9 @@ export default function IpdManagementPage() {
     {
       field: 'status',
       headerName: 'Bed Status',
-      width: 130,
+      width: 140,
       renderCell: (params: GridRenderCellParams) => {
-        const val = params.value as BedStatus;
-        const colorMap: Record<BedStatus, { bg: string; color: string }> = {
-          Occupied: { bg: '#FEF2F2', color: '#DC2626' },
-          Available: { bg: '#F0FDF4', color: '#16A34A' },
-          Sanitizing: { bg: '#FEF3C7', color: '#B45309' },
-          Reserved: { bg: '#EFF6FF', color: '#1D4ED8' },
-        };
-        const conf = colorMap[val] || { bg: '#F1F5F9', color: '#475569' };
-        return (
-          <Chip
-            label={val}
-            size="small"
-            sx={{ bgcolor: conf.bg, color: conf.color, fontWeight: 700, fontSize: '0.72rem', height: 22, borderRadius: '5px' }}
-          />
-        );
+        return <StatusBadge status={params.value as string} />;
       },
     },
     {
@@ -301,29 +290,21 @@ export default function IpdManagementPage() {
   return (
     <Box sx={{ pb: 6 }}>
       {/* ─── Breadcrumbs & Header ─── */}
-      <Box sx={{ mb: 3 }}>
-        <Breadcrumbs sx={{ fontSize: '0.8125rem', mb: 0.5 }}>
-          <Link underline="hover" color="inherit" href="/portal/hospital">
-            Hospital
-          </Link>
-          <Typography color="text.primary" sx={{ fontSize: '0.8125rem', fontWeight: 600 }}>
-            IPD & Bed Management
-          </Typography>
-        </Breadcrumbs>
-        <Stack direction={{ xs: 'column', md: 'row' }} sx={{ justifyContent: 'space-between', alignItems: { xs: 'flex-start', md: 'center' } }}>
-          <Box>
-            <Typography sx={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: { xs: '1.5rem', sm: '1.875rem' }, color: '#0F172A', letterSpacing: '-0.025em', lineHeight: 1.2 }}>
-              IPD & Ward Bed Management
-            </Typography>
-            <Typography sx={{ color: '#64748B', fontSize: '0.925rem', mt: 0.5 }}>
-              Live inpatient ward census, visual bed allocation matrix, and nurse station monitoring.
-            </Typography>
-          </Box>
-          <Stack direction="row" spacing={1.5} sx={{ mt: { xs: 2, md: 0 } }}>
+      <PageHeader
+        breadcrumbs={[
+          { label: 'Hospital', href: '/portal/hospital' },
+          { label: 'IPD & Bed Management' },
+        ]}
+        category="Inpatient Management"
+        title="IPD & Ward Bed Management"
+        description="Live inpatient ward census, visual bed allocation matrix, and nurse station monitoring."
+        icon={<AirlineSeatIndividualSuiteIcon />}
+        actions={
+          <Stack direction="row" spacing={1.5}>
             <Button
               variant="outlined"
               startIcon={<SwapHorizIcon />}
-              onClick={() => alert('Initiating ward transfer protocol...')}
+              onClick={() => toast.success('Initiating ward transfer protocol...')}
               sx={{
                 textTransform: 'none',
                 fontWeight: 600,
@@ -354,8 +335,8 @@ export default function IpdManagementPage() {
               + New IPD Admission
             </Button>
           </Stack>
-        </Stack>
-      </Box>
+        }
+      />
 
       {/* ─── Top KPI Cards ─── */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
@@ -508,18 +489,7 @@ export default function IpdManagementPage() {
                             {bed.bedNumber}
                           </Typography>
                         </Stack>
-                        <Chip
-                          label={bed.status}
-                          size="small"
-                          sx={{
-                            fontWeight: 700,
-                            fontSize: '0.7rem',
-                            height: 20,
-                            borderRadius: '4px',
-                            bgcolor: isOccupied ? '#FEF2F2' : isAvailable ? '#F0FDF4' : isSanitizing ? '#FEF3C7' : '#EFF6FF',
-                            color: isOccupied ? '#DC2626' : isAvailable ? '#16A34A' : isSanitizing ? '#B45309' : '#1D4ED8',
-                          }}
-                        />
+                        <StatusBadge status={bed.status} size="small" />
                       </Stack>
                       <Typography sx={{ fontSize: '0.72rem', color: '#64748B', mb: 1.5 }}>
                         {bed.ward} • {bed.floor}

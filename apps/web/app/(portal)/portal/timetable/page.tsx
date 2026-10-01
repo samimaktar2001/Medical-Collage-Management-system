@@ -22,6 +22,8 @@ import DialogActions from '@mui/material/DialogActions';
 import TextField from '@mui/material/TextField';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { MedoraDataGridPagination } from '../../../Pagination';
+import { StatusBadge } from '../../../StatusBadge';
+import { PageHeader } from '../../../PageHeader';
 
 // Icons
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
@@ -172,14 +174,7 @@ export default function AcademicTimetablePage() {
       headerName: 'Session Type',
       width: 160,
       renderCell: (params: GridRenderCellParams) => {
-        const conf = getTypeStyle(params.value as SessionType);
-        return (
-          <Chip
-            label={params.value}
-            size="small"
-            sx={{ bgcolor: conf.badgeBg, color: conf.badgeColor, fontWeight: 700, fontSize: '0.72rem', height: 22, borderRadius: '4px' }}
-          />
-        );
+        return <StatusBadge status={params.value as string} />;
       },
     },
     { field: 'venue', headerName: 'Lecture Hall / Lab', flex: 1, minWidth: 150 },
@@ -189,25 +184,17 @@ export default function AcademicTimetablePage() {
   return (
     <Box sx={{ pb: 6 }}>
       {/* ─── Breadcrumbs & Header ─── */}
-      <Box sx={{ mb: 3 }}>
-        <Breadcrumbs sx={{ fontSize: '0.8125rem', mb: 0.5 }}>
-          <Link underline="hover" color="inherit" href="/portal/dashboard">
-            Academic
-          </Link>
-          <Typography color="text.primary" sx={{ fontSize: '0.8125rem', fontWeight: 600 }}>
-            Timetable & Curriculum Schedule
-          </Typography>
-        </Breadcrumbs>
-        <Stack direction={{ xs: 'column', md: 'row' }} sx={{ justifyContent: 'space-between', alignItems: { xs: 'flex-start', md: 'center' } }}>
-          <Box>
-            <Typography sx={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: { xs: '1.5rem', sm: '1.875rem' }, color: '#0F172A', letterSpacing: '-0.025em', lineHeight: 1.2 }}>
-              Academic & Clinical Timetable
-            </Typography>
-            <Typography sx={{ color: '#64748B', fontSize: '0.925rem', mt: 0.5 }}>
-              National Medical Commission (NMC) aligned curriculum scheduler, clinical postings, and lecture timetables.
-            </Typography>
-          </Box>
-          <Stack direction="row" spacing={1.5} sx={{ mt: { xs: 2, md: 0 } }}>
+      <PageHeader
+        breadcrumbs={[
+          { label: 'Academic', href: '/portal/dashboard' },
+          { label: 'Timetable & Curriculum Schedule' },
+        ]}
+        category="Curriculum & Scheduling"
+        title="Academic & Clinical Timetable"
+        description="National Medical Commission (NMC) aligned curriculum scheduler, clinical postings, and lecture timetables."
+        icon={<CalendarMonthIcon />}
+        actions={
+          <Stack direction="row" spacing={1.5}>
             <Button
               variant="outlined"
               startIcon={<PrintIcon />}
@@ -242,8 +229,8 @@ export default function AcademicTimetablePage() {
               + Add Class / Rotation
             </Button>
           </Stack>
-        </Stack>
-      </Box>
+        }
+      />
 
       {/* ─── Top KPIs ─── */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
@@ -301,13 +288,10 @@ export default function AcademicTimetablePage() {
               { label: 'Practical / Lab', type: 'Practical / Lab' as SessionType },
               { label: 'Tutorial / Seminar', type: 'Tutorial' as SessionType },
             ].map((leg) => {
-              const s = getTypeStyle(leg.type);
               return (
-                <Chip
+                <StatusBadge
                   key={leg.label}
-                  label={leg.label}
-                  size="small"
-                  sx={{ bgcolor: s.badgeBg, color: s.badgeColor, fontWeight: 700, fontSize: '0.7rem', height: 22 }}
+                  status={leg.label}
                 />
               );
             })}
@@ -381,17 +365,7 @@ export default function AcademicTimetablePage() {
                                 <Typography sx={{ fontSize: '0.75rem', fontWeight: 800, color: style.color }}>
                                   {slot.timeSlot}
                                 </Typography>
-                                <Chip
-                                  label={slot.type}
-                                  size="small"
-                                  sx={{
-                                    height: 18,
-                                    fontSize: '0.65rem',
-                                    fontWeight: 700,
-                                    bgcolor: style.badgeBg,
-                                    color: style.badgeColor,
-                                  }}
-                                />
+                                <StatusBadge status={slot.type} size="small" />
                               </Stack>
                               <Typography sx={{ fontWeight: 800, fontSize: '0.9rem', color: '#0F172A', mb: 0.5, lineHeight: 1.3 }}>
                                 {slot.subject}

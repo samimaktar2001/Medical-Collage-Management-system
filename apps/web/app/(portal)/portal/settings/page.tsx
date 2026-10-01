@@ -18,7 +18,10 @@ import Alert from '@mui/material/Alert';
 
 // Icons
 import SaveIcon from '@mui/icons-material/Save';
+import SettingsIcon from '@mui/icons-material/Settings';
+import { PageHeader } from '../../../PageHeader';
 import { useAuth, api } from '../../PortalShell';
+import toast from 'react-hot-toast';
 
 export default function SettingsPage() {
   const { user } = useAuth();
@@ -63,31 +66,26 @@ export default function SettingsPage() {
       };
       await api('settings', 'PATCH', payload, user?.csrf);
       setSaved(true);
+      toast.success('System settings saved successfully');
       setTimeout(() => setSaved(false), 3000);
-    } catch (err) {
-      alert('Failed to save settings');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to save settings');
     }
   };
 
   return (
     <Box sx={{ pb: 6 }}>
       {/* ─── Breadcrumbs & Header ─── */}
-      <Box sx={{ mb: 3 }}>
-        <Breadcrumbs sx={{ fontSize: '0.8125rem', mb: 0.5 }}>
-          <Link underline="hover" color="inherit" href="/portal/dashboard">
-            System
-          </Link>
-          <Typography color="text.primary" sx={{ fontSize: '0.8125rem', fontWeight: 600 }}>
-            Settings
-          </Typography>
-        </Breadcrumbs>
-        <Typography sx={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: { xs: '1.5rem', sm: '1.75rem', md: '1.875rem' }, color: '#0F172A', letterSpacing: '-0.025em', lineHeight: 1.2, mb: 0.5 }}>
-          Platform &amp; System Configuration
-        </Typography>
-        <Typography sx={{ color: '#64748B', fontSize: '0.925rem', lineHeight: 1.5 }}>
-          Institutional parameters, multi-tenant preferences, security policies and notification triggers.
-        </Typography>
-      </Box>
+      <PageHeader
+        breadcrumbs={[
+          { label: 'System', href: '/portal/dashboard' },
+          { label: 'Settings' },
+        ]}
+        category="System Administration"
+        title="Platform & System Configuration"
+        description="Institutional parameters, multi-tenant preferences, security policies and notification triggers."
+        icon={<SettingsIcon />}
+      />
 
       {saved && (
         <Alert severity="success" sx={{ mb: 3, borderRadius: '10px' }} onClose={() => setSaved(false)}>

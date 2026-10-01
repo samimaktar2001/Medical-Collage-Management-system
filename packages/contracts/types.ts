@@ -12,6 +12,6 @@ export type MastersInput = { "kind": "Campus" | "Department" | "Programme" | "Ba
 export type PoliciesInput = { "name": string; "kind": "Attendance" | "Academic" | "Fees"; "effective_date": string; "config": Record<string, unknown>; };
 export type CorrectionsInput = { "session_id": string; "student_id": string; "proposed_status": "Present" | "Absent" | "Excused"; "reason": string; };
 export type RefundsInput = { "payment_id": string; "amount_minor": number; "reason": string; };
-export type DocumentsInput = { "name": string; "mime": "application/pdf" | "image/png" | "image/jpeg"; "content_base64": string; };
+export type DocumentsInput = { "name": string; "mime": "application/pdf" | "image/png" | "image/jpeg"; "content_base64"?: string; "s3_key"?: string; };
 export type EvidenceInput = { "title": string; "period": string; };
 export type ApiErrorEnvelope = { error: {code:string;message:string;correlation_id?:string} };

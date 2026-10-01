@@ -27,6 +27,7 @@ import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
 import CircularProgress from '@mui/material/CircularProgress';
 import Alert from '@mui/material/Alert';
+import { StatusBadge } from '../../../../StatusBadge';
 
 // Icons
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -163,16 +164,8 @@ export default function StudentProfilePage({ params }: { params: Promise<{ id: s
               <Typography sx={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: { xs: '1.5rem', sm: '1.75rem', md: '1.875rem' }, color: '#0F172A', letterSpacing: '-0.025em' }}>
                 {student?.name}
               </Typography>
-              <Chip
-                label={student?.status || 'Active'}
-                size="small"
-                sx={{ bgcolor: '#D1FAE5', color: '#065F46', fontWeight: 700, fontSize: '0.75rem', height: 24 }}
-              />
-              <Chip
-                label={student?.programme || 'MBBS'}
-                size="small"
-                sx={{ bgcolor: '#E0F2FE', color: '#0284C7', fontWeight: 700, fontSize: '0.75rem', height: 24 }}
-              />
+              <StatusBadge status={student?.status || 'Active'} />
+              <StatusBadge status={student?.programme || 'MBBS'} tone="info" />
             </Stack>
             <Typography sx={{ fontSize: '0.875rem', color: '#64748B', mb: 1.5 }}>
               Roll Number: <strong>{student?.number || student?.id?.slice(0, 8)}</strong> • Department: <strong>{student?.department}</strong> • Batch: <strong>{student?.batch}</strong>
@@ -200,7 +193,9 @@ export default function StudentProfilePage({ params }: { params: Promise<{ id: s
               <Typography sx={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: '1.5rem', color: '#0F766E' }}>
                 {student?.attendancePercent || 92.5}%
               </Typography>
-              <Chip label="Eligible for Exams" size="small" sx={{ height: 20, fontSize: '0.65rem', bgcolor: '#D1FAE5', color: '#047857', fontWeight: 700, mt: 0.5 }} />
+              <Box sx={{ mt: 0.5 }}>
+                <StatusBadge status="Eligible for Exams" />
+              </Box>
             </Paper>
           </Grid>
         </Grid>
@@ -330,7 +325,7 @@ export default function StudentProfilePage({ params }: { params: Promise<{ id: s
                     <TableCell sx={{ fontSize: '0.8125rem' }}>{row.faculty}</TableCell>
                     <TableCell sx={{ textAlign: 'center', fontWeight: 700 }}>{row.credits}</TableCell>
                     <TableCell>
-                      <Chip label={row.status} size="small" sx={{ bgcolor: '#FEF3C7', color: '#B45309', fontWeight: 600, fontSize: '0.7rem' }} />
+                      <StatusBadge status={row.status} />
                     </TableCell>
                   </TableRow>
                 ))}
@@ -402,7 +397,7 @@ export default function StudentProfilePage({ params }: { params: Promise<{ id: s
                     <TableCell sx={{ textAlign: 'center', fontWeight: 700, color: '#0F766E' }}>{row.scored}</TableCell>
                     <TableCell sx={{ fontWeight: 700 }}>{row.grade}</TableCell>
                     <TableCell>
-                      <Chip label={row.result} size="small" sx={{ bgcolor: '#D1FAE5', color: '#065F46', fontWeight: 700, height: 22, fontSize: '0.7rem' }} />
+                      <StatusBadge status={row.result} />
                     </TableCell>
                   </TableRow>
                 ))}
@@ -447,7 +442,7 @@ export default function StudentProfilePage({ params }: { params: Promise<{ id: s
                     <TableCell sx={{ fontSize: '0.8125rem', color: '#64748B' }}>{inv.date}</TableCell>
                     <TableCell sx={{ fontWeight: 700 }}>{inv.amount}</TableCell>
                     <TableCell>
-                      <Chip label={inv.status} size="small" sx={{ bgcolor: '#D1FAE5', color: '#065F46', fontWeight: 700, fontSize: '0.7rem' }} />
+                      <StatusBadge status={inv.status} />
                     </TableCell>
                     <TableCell sx={{ textAlign: 'right' }}>
                       <Button size="small" sx={{ textTransform: 'none', color: '#0F766E', fontWeight: 600 }}>
@@ -491,7 +486,7 @@ export default function StudentProfilePage({ params }: { params: Promise<{ id: s
                     <TableCell>{row.case}</TableCell>
                     <TableCell sx={{ fontSize: '0.8125rem' }}>{row.doc}</TableCell>
                     <TableCell>
-                      <Chip label={row.ver} size="small" sx={{ bgcolor: '#D1FAE5', color: '#065F46', fontWeight: 700, fontSize: '0.7rem' }} />
+                      <StatusBadge status={row.ver} />
                     </TableCell>
                   </TableRow>
                 ))}

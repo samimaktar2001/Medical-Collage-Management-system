@@ -175,7 +175,24 @@ const theme = createTheme({
     '0 10px 15px -3px rgba(15,23,42,0.08), 0 4px 6px -4px rgba(15,23,42,0.04)',
     '0 20px 25px -5px rgba(15,23,42,0.08), 0 8px 10px -6px rgba(15,23,42,0.04)',
     '0 25px 50px -12px rgba(15,23,42,0.15)',
-    ...Array(18).fill('none') as any,
+    '0 8px 20px -2px rgba(15,23,42,0.10)',
+    '0 12px 32px -4px rgba(15,23,42,0.16), 0 4px 12px -2px rgba(15,23,42,0.08)',
+    '0 14px 36px -4px rgba(15,23,42,0.16)',
+    '0 16px 40px -4px rgba(15,23,42,0.16)',
+    '0 18px 44px -4px rgba(15,23,42,0.16)',
+    '0 20px 48px -4px rgba(15,23,42,0.18)',
+    '0 22px 52px -4px rgba(15,23,42,0.18)',
+    '0 24px 56px -4px rgba(15,23,42,0.18)',
+    '0 26px 60px -4px rgba(15,23,42,0.18)',
+    '0 28px 64px -4px rgba(15,23,42,0.20)',
+    '0 30px 68px -4px rgba(15,23,42,0.20)',
+    '0 32px 72px -4px rgba(15,23,42,0.20)',
+    '0 34px 76px -4px rgba(15,23,42,0.20)',
+    '0 36px 80px -4px rgba(15,23,42,0.22)',
+    '0 38px 84px -4px rgba(15,23,42,0.22)',
+    '0 40px 88px -4px rgba(15,23,42,0.22)',
+    '0 42px 92px -4px rgba(15,23,42,0.22)',
+    '0 25px 50px -12px rgba(15,23,42,0.25)',
   ] as any,
   components: {
     MuiCssBaseline: {
@@ -248,8 +265,78 @@ const theme = createTheme({
     MuiPaper: {
       defaultProps: { elevation: 0 },
       styleOverrides: {
-        root: { backgroundImage: 'none' },
+        root: {
+          backgroundImage: 'none',
+          backgroundColor: '#FFFFFF',
+        },
         rounded: { borderRadius: 12 },
+        elevation8: {
+          boxShadow: '0 12px 32px -4px rgba(15, 23, 42, 0.16), 0 4px 12px -2px rgba(15, 23, 42, 0.08) !important',
+        },
+      },
+    },
+    MuiMenu: {
+      defaultProps: {
+        elevation: 8,
+      },
+      styleOverrides: {
+        root: {
+          zIndex: 1400,
+        },
+        paper: {
+          backgroundColor: '#FFFFFF !important',
+          borderRadius: '12px !important',
+          border: '1px solid #CBD5E1 !important',
+          boxShadow: '0 12px 32px -4px rgba(15, 23, 42, 0.18), 0 4px 12px -2px rgba(15, 23, 42, 0.08) !important',
+          padding: '4px !important',
+          marginTop: 4,
+          minWidth: 150,
+        },
+        list: {
+          padding: '4px',
+          backgroundColor: '#FFFFFF !important',
+        },
+      },
+    },
+    MuiPopover: {
+      defaultProps: {
+        elevation: 8,
+      },
+      styleOverrides: {
+        root: {
+          zIndex: 1400,
+        },
+        paper: {
+          backgroundColor: '#FFFFFF !important',
+          borderRadius: '12px !important',
+          border: '1px solid #CBD5E1 !important',
+          boxShadow: '0 12px 32px -4px rgba(15, 23, 42, 0.18), 0 4px 12px -2px rgba(15, 23, 42, 0.08) !important',
+        },
+      },
+    },
+    MuiMenuItem: {
+      styleOverrides: {
+        root: {
+          fontSize: '0.8125rem',
+          fontWeight: 500,
+          color: '#1E293B',
+          borderRadius: 6,
+          padding: '8px 12px',
+          margin: '2px 0',
+          transition: 'all 0.12s ease',
+          '&:hover': {
+            backgroundColor: '#F1F5F9 !important',
+            color: '#0F766E',
+          },
+          '&.Mui-selected': {
+            backgroundColor: '#F0FDFA !important',
+            color: '#0F766E !important',
+            fontWeight: 700,
+            '&:hover': {
+              backgroundColor: '#CCFBF1 !important',
+            },
+          },
+        },
       },
     },
     MuiInputBase: {
@@ -320,13 +407,44 @@ const theme = createTheme({
       },
     },
     MuiSelect: {
-      defaultProps: { size: 'small' },
+      defaultProps: {
+        size: 'small',
+        MenuProps: {
+          slotProps: {
+            paper: {
+              sx: {
+                bgcolor: '#FFFFFF !important',
+                backgroundColor: '#FFFFFF !important',
+                border: '1px solid #CBD5E1 !important',
+                borderRadius: '12px !important',
+                boxShadow: '0 12px 32px -4px rgba(15, 23, 42, 0.18), 0 4px 12px -2px rgba(15, 23, 42, 0.08) !important',
+                mt: 0.8,
+                '& .MuiList-root': {
+                  bgcolor: '#FFFFFF !important',
+                  backgroundColor: '#FFFFFF !important',
+                  py: 0.5,
+                },
+              },
+            },
+          },
+        },
+      },
       styleOverrides: {
         select: {
           minHeight: 'auto',
           display: 'flex',
           alignItems: 'center',
           padding: '8.5px 14px !important',
+        },
+      },
+    },
+    MuiAutocomplete: {
+      styleOverrides: {
+        paper: {
+          backgroundColor: '#FFFFFF !important',
+          borderRadius: '12px !important',
+          border: '1px solid #CBD5E1 !important',
+          boxShadow: '0 12px 32px -4px rgba(15, 23, 42, 0.18), 0 4px 12px -2px rgba(15, 23, 42, 0.08) !important',
         },
       },
     },
@@ -353,12 +471,21 @@ const theme = createTheme({
     },
     MuiChip: {
       styleOverrides: {
-        root: { fontWeight: 600, fontSize: '0.75rem', borderRadius: 6, height: 26 },
-        sizeSmall: { height: 22, fontSize: '0.6875rem' },
-        colorSuccess: { backgroundColor: '#D1FAE5', color: '#047857' },
-        colorWarning: { backgroundColor: '#FEF3C7', color: '#B45309' },
-        colorError: { backgroundColor: '#FEE2E2', color: '#B91C1C' },
-        colorInfo: { backgroundColor: '#DBEAFE', color: '#0369A1' },
+        root: {
+          fontWeight: 700,
+          fontSize: '0.72rem',
+          borderRadius: 6,
+          height: 24,
+          border: '1px solid #E2E8F0',
+          backgroundColor: '#F8FAFC',
+          color: '#475569',
+        },
+        sizeSmall: { height: 24, fontSize: '0.72rem', borderRadius: 6 },
+        colorSuccess: { backgroundColor: '#ECFDF5', color: '#065F46', borderColor: '#A7F3D0' },
+        colorWarning: { backgroundColor: '#FFFBEB', color: '#92400E', borderColor: '#FDE68A' },
+        colorError: { backgroundColor: '#FEF2F2', color: '#991B1B', borderColor: '#FECACA' },
+        colorInfo: { backgroundColor: '#EFF6FF', color: '#1E40AF', borderColor: '#BFDBFE' },
+        colorPrimary: { backgroundColor: '#F0FDFA', color: '#0F766E', borderColor: '#99F6E4' },
       },
     },
     MuiAvatar: {

@@ -19,6 +19,9 @@ import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import LinearProgress from '@mui/material/LinearProgress';
+import toast from 'react-hot-toast';
+import { StatusBadge } from '../../../StatusBadge';
+import { PageHeader } from '../../../PageHeader';
 
 // Icons
 import FactCheckIcon from '@mui/icons-material/FactCheck';
@@ -47,28 +50,17 @@ export default function NMCAuditPage() {
   return (
     <Box>
       {/* ─── Breadcrumbs & Header ─── */}
-      <Stack direction={{ xs: 'column', md: 'row' }} sx={{ justifyContent: 'space-between', alignItems: { md: 'center' }, gap: 2, mb: 3 }}>
-        <Box>
-          <Breadcrumbs sx={{ fontSize: '0.8125rem', mb: 0.5 }}>
-            <Link underline="hover" color="inherit" href="/portal/dashboard">
-              Reports &amp; Roles
-            </Link>
-            <Typography color="text.primary" sx={{ fontSize: '0.8125rem', fontWeight: 600 }}>
-              NMC MSR Audit
-            </Typography>
-          </Breadcrumbs>
-          <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', mb: 0.5, flexWrap: 'wrap', gap: 1 }}>
-            <Typography sx={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: { xs: '1.5rem', sm: '1.75rem', md: '1.875rem' }, color: '#0F172A', letterSpacing: '-0.025em', lineHeight: 1.2 }}>
-              NMC Minimum Standard Requirements (MSR) Inspection Audit
-            </Typography>
-            <Chip label="Assessment Year 2026–27" size="small" sx={{ bgcolor: '#DCFCE7', color: '#15803D', fontWeight: 800 }} />
-          </Stack>
-          <Typography sx={{ color: '#64748B', fontSize: '0.925rem', lineHeight: 1.5 }}>
-            Statutory verification cockpit for NMC UG/PG assessors: Daily OPD footfall, IPD bed occupancy, OT surgical volume, diagnostics, and AEBAS faculty biometric compliance.
-          </Typography>
-        </Box>
-
-          <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', flexShrink: 0, flexWrap: 'nowrap' }}>
+      <PageHeader
+        breadcrumbs={[
+          { label: 'Reports & Roles', href: '/portal/dashboard' },
+          { label: 'NMC MSR Audit' },
+        ]}
+        title="NMC Minimum Standard Requirements (MSR) Inspection Audit"
+        description="Statutory verification cockpit for NMC UG/PG assessors: Daily OPD footfall, IPD bed occupancy, OT surgical volume, diagnostics, and AEBAS faculty biometric compliance."
+        icon={<FactCheckIcon sx={{ fontSize: 24 }} />}
+        badge={<StatusBadge status="Assessment Year 2026–27" tone="teal" />}
+        actions={
+          <>
             <Button
               variant="outlined"
               size="small"
@@ -79,13 +71,12 @@ export default function NMCAuditPage() {
                 fontWeight: 700,
                 fontSize: '0.8125rem',
                 whiteSpace: 'nowrap',
-                flexShrink: 0,
                 px: 2,
                 py: 0.8,
                 borderRadius: '8px',
                 borderColor: '#CBD5E1',
                 color: '#0F766E',
-                '&:hover': { borderColor: '#0F766E', bgcolor: '#F0FDFA' }
+                '&:hover': { borderColor: '#0F766E', bgcolor: '#F0FDFA' },
               }}
             >
               Print Inspection Summary
@@ -94,26 +85,26 @@ export default function NMCAuditPage() {
               variant="contained"
               size="small"
               startIcon={<DownloadIcon sx={{ color: '#FFFFFF !important' }} />}
-              onClick={() => alert('Generating official NMC Form-B Complete Institutional Audit Dossier (PDF format) with digital signature stamps.')}
+              onClick={() => toast.success('Generating official NMC Form-B Complete Institutional Audit Dossier (PDF format) with digital signature stamps.')}
               sx={{
                 textTransform: 'none',
                 fontWeight: 700,
                 fontSize: '0.8125rem',
                 whiteSpace: 'nowrap',
-                flexShrink: 0,
                 px: 2.2,
                 py: 0.8,
                 borderRadius: '8px',
                 bgcolor: '#0F766E',
                 color: '#FFFFFF !important',
                 boxShadow: 'none',
-                '&:hover': { bgcolor: '#115E59', boxShadow: 'none' }
+                '&:hover': { bgcolor: '#115E59', boxShadow: 'none' },
               }}
             >
               Export NMC Form-B Dossier
             </Button>
-          </Stack>
-        </Stack>
+          </>
+        }
+      />
 
         {/* 5 Regulatory Benchmark Cards */}
         <Grid container spacing={2.5} sx={{ mb: 3 }}>
@@ -196,7 +187,7 @@ export default function NMCAuditPage() {
                 Real-time NMC inspection snapshot for 150 MBBS undergraduate annual intake.
               </Typography>
             </Box>
-            <Chip label="Overall Status: 100% Fully Compliant" sx={{ bgcolor: '#DCFCE7', color: '#15803D', fontWeight: 800 }} />
+            <StatusBadge status="Overall Status: 100% Fully Compliant" tone="success" />
           </Box>
 
           <TableContainer>
@@ -224,7 +215,7 @@ export default function NMCAuditPage() {
                     <TableCell sx={{ fontWeight: 700, fontSize: '0.8rem', color: '#0284C7' }}>{row.labTests}</TableCell>
                     <TableCell sx={{ fontWeight: 800, fontSize: '0.8rem', color: '#059669' }}>{row.facultyAebas}</TableCell>
                     <TableCell>
-                      <Chip icon={<CheckCircleIcon sx={{ fontSize: '13px !important', color: '#059669 !important' }} />} label={row.status} size="small" sx={{ bgcolor: '#DCFCE7', color: '#15803D', fontWeight: 800, fontSize: '0.6875rem' }} />
+                      <StatusBadge status={row.status} />
                     </TableCell>
                   </TableRow>
                 ))}

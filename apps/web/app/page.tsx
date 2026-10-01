@@ -28,6 +28,7 @@ import DialogContent from '@mui/material/DialogContent';
 import TextField from '@mui/material/TextField';
 import InputAdornment from '@mui/material/InputAdornment';
 import { alpha } from '@mui/material/styles';
+import toast from 'react-hot-toast';
 
 // Icons
 import SearchIcon from '@mui/icons-material/Search';
@@ -153,14 +154,67 @@ export default function HomePage() {
   const [stats, setStats] = useState({ departments: 25, students: 1000, faculty: 200, patients: 5000 });
   const [settings, setSettings] = useState<any>({});
 
+  // Quick inquiry state
+  const [inquiryName, setInquiryName] = useState('');
+  const [inquiryEmail, setInquiryEmail] = useState('');
+  const [inquiryPhone, setInquiryPhone] = useState('');
+  const [inquiryCourse, setInquiryCourse] = useState('');
+  const [inquiryMessage, setInquiryMessage] = useState('');
+  const [inquiryLoading, setInquiryLoading] = useState(false);
+
+  const handleInquirySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inquiryName.trim() || !inquiryEmail.trim() || !inquiryMessage.trim()) {
+      toast.error('Please provide your name, valid email, and inquiry message.');
+      return;
+    }
+    setInquiryLoading(true);
+    try {
+      const res = await fetch('/api/v1/public/enquiry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: inquiryName.trim(),
+          email: inquiryEmail.trim(),
+          message: `${inquiryPhone ? `Phone: ${inquiryPhone}\n` : ''}${inquiryCourse ? `Course: ${inquiryCourse}\n` : ''}${inquiryMessage.trim()}`,
+        }),
+      });
+      if (res.ok) {
+        toast.success('Thank you! Your official inquiry has been submitted to the academic office.');
+        setInquiryName('');
+        setInquiryEmail('');
+        setInquiryPhone('');
+        setInquiryCourse('');
+        setInquiryMessage('');
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data?.error?.message || 'Failed to submit inquiry. Please try again.');
+      }
+    } catch {
+      toast.error('Network error while submitting inquiry.');
+    } finally {
+      setInquiryLoading(false);
+    }
+  };
+
   React.useEffect(() => {
     async function fetchDynamicContent() {
       try {
+        const safeFetch = async (url: string) => {
+          try {
+            const res = await fetch(url);
+            if (!res.ok) return null;
+            return await res.json();
+          } catch {
+            return null;
+          }
+        };
+
         const [deptRes, newsRes, statsRes, settingsRes] = await Promise.all([
-          fetch('/api/v1/public/departments').then(res => res.json()),
-          fetch('/api/v1/public/content').then(res => res.json()),
-          fetch('/api/v1/public/stats').then(res => res.json()).catch(() => ({})),
-          fetch('/api/v1/public/settings').then(res => res.json()).catch(() => ({}))
+          safeFetch('/api/v1/public/departments'),
+          safeFetch('/api/v1/public/content'),
+          safeFetch('/api/v1/public/stats'),
+          safeFetch('/api/v1/public/settings')
         ]);
 
         if (settingsRes?.data) {
@@ -868,33 +922,76 @@ export default function HomePage() {
                   Fill out the form below and our admissions committee will reach out within 24 hours.
                 </Typography>
 
-                <Grid container spacing={2}>
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <TextField fullWidth size="small" label="Your Full Name" placeholder="e.g. Dr. / Mr. / Ms." />
+                <Box component="form" onSubmit={handleInquirySubmit}>
+                  <Grid container spacing={2}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        required
+                        label="Your Full Name *"
+                        placeholder="e.g. Dr. / Mr. / Ms."
+                        value={inquiryName}
+                        onChange={(e) => setInquiryName(e.target.value)}
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="Phone Number"
+                        placeholder="+91 XXXXX XXXXX"
+                        value={inquiryPhone}
+                        onChange={(e) => setInquiryPhone(e.target.value)}
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        required
+                        type="email"
+                        label="Email Address *"
+                        placeholder="you@example.com"
+                        value={inquiryEmail}
+                        onChange={(e) => setInquiryEmail(e.target.value)}
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="Course of Interest"
+                        placeholder="MBBS, MD, MS, BDS"
+                        value={inquiryCourse}
+                        onChange={(e) => setInquiryCourse(e.target.value)}
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12 }}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        required
+                        multiline
+                        rows={3}
+                        label="Message or Inquiry Details *"
+                        value={inquiryMessage}
+                        onChange={(e) => setInquiryMessage(e.target.value)}
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12 }}>
+                      <Button
+                        type="submit"
+                        variant="contained"
+                        fullWidth
+                        disabled={inquiryLoading}
+                        sx={{ bgcolor: '#0F766E', fontWeight: 700, py: 1.2, textTransform: 'none', borderRadius: '8px', '&:hover': { bgcolor: '#0D6861' } }}
+                      >
+                        {inquiryLoading ? 'Submitting Inquiry...' : 'Submit Inquiry'}
+                      </Button>
+                    </Grid>
                   </Grid>
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <TextField fullWidth size="small" label="Phone Number" placeholder="+91 XXXXX XXXXX" />
-                  </Grid>
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <TextField fullWidth size="small" label="Email Address" placeholder="you@example.com" />
-                  </Grid>
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <TextField fullWidth size="small" label="Course of Interest" placeholder="MBBS, MD, MS, BDS" />
-                  </Grid>
-                  <Grid size={{ xs: 12 }}>
-                    <TextField fullWidth size="small" multiline rows={3} label="Message or Inquiry Details" />
-                  </Grid>
-                  <Grid size={{ xs: 12 }}>
-                    <Button
-                      variant="contained"
-                      fullWidth
-                      onClick={() => alert('Thank you! Your message has been submitted to the academic office.')}
-                      sx={{ bgcolor: '#0F766E', fontWeight: 700, py: 1.2, textTransform: 'none', borderRadius: '8px', '&:hover': { bgcolor: '#0D6861' } }}
-                    >
-                      Submit Inquiry
-                    </Button>
-                  </Grid>
-                </Grid>
+                </Box>
               </Paper>
             </Grid>
           </Grid>

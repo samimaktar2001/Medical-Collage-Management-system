@@ -21,6 +21,8 @@ import Divider from '@mui/material/Divider';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import Tooltip from '@mui/material/Tooltip';
+import { StatusBadge } from '../../../StatusBadge';
+import { PageHeader } from '../../../PageHeader';
 
 // Icons
 import SearchIcon from '@mui/icons-material/Search';
@@ -188,22 +190,16 @@ export default function MessagesPage() {
   return (
     <Box>
       {/* ─── Breadcrumbs & Header ─── */}
-      <Box sx={{ mb: 2.5 }}>
-        <Breadcrumbs sx={{ fontSize: '0.8125rem', mb: 0.5 }}>
-          <Link underline="hover" color="inherit" href="/portal/dashboard">
-            Communication
-          </Link>
-          <Typography color="text.primary" sx={{ fontSize: '0.8125rem', fontWeight: 600 }}>
-            Staff Messages
-          </Typography>
-        </Breadcrumbs>
-        <Typography sx={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: { xs: '1.5rem', sm: '1.75rem', md: '1.875rem' }, color: '#0F172A', letterSpacing: '-0.025em', lineHeight: 1.2, mb: 0.5 }}>
-          Clinical Staff Messaging &amp; Consult Dispatch
-        </Typography>
-        <Typography sx={{ color: '#64748B', fontSize: '0.925rem', lineHeight: 1.5 }}>
-          Real-time secure inter-departmental consultation channels, STAT clinical dispatch, and on-duty medical staff coordination.
-        </Typography>
-      </Box>
+      <PageHeader
+        breadcrumbs={[
+          { label: 'Communication', href: '/portal/dashboard' },
+          { label: 'Staff Messages' },
+        ]}
+        category="Clinical Communication"
+        title="Clinical Staff Messaging & Consult Dispatch"
+        description="Real-time secure inter-departmental consultation channels, STAT clinical dispatch, and on-duty medical staff coordination."
+        icon={<LocalHospitalIcon />}
+      />
 
       {/* Main Messenger Box */}
       <Card
@@ -234,7 +230,7 @@ export default function MessagesPage() {
                 <Typography sx={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: '1.1rem', color: '#0F172A' }}>
                   Clinical Consults
                 </Typography>
-                <Chip size="small" label="Live Staff" sx={{ bgcolor: '#F0FDFA', color: '#0F766E', fontWeight: 800, fontSize: '0.6875rem' }} />
+                <StatusBadge status="Live Staff" tone="teal" />
               </Stack>
 
               <TextField
@@ -337,11 +333,7 @@ export default function MessagesPage() {
                     <Typography sx={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: '1rem', color: '#0F172A' }}>
                       {activeThread.name}
                     </Typography>
-                    {activeThread.online ? (
-                      <Chip label="Online" size="small" sx={{ height: 18, fontSize: '0.625rem', bgcolor: '#ECFDF5', color: '#059669', fontWeight: 800 }} />
-                    ) : (
-                      <Chip label="Offline" size="small" sx={{ height: 18, fontSize: '0.625rem', bgcolor: '#F1F5F9', color: '#64748B', fontWeight: 700 }} />
-                    )}
+                    <StatusBadge status={activeThread.online ? 'Online' : 'Offline'} size="small" />
                   </Stack>
                   <Typography sx={{ fontSize: '0.75rem', color: '#64748B' }}>
                     {activeThread.role} • <strong>{activeThread.department}</strong>

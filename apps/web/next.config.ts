@@ -1,7 +1,22 @@
 import type { NextConfig } from 'next';
+
+const apiDestination = (
+  process.env.API_INTERNAL_URL ||
+  process.env.NEXT_PUBLIC_API_URL ||
+  'http://127.0.0.1:4000'
+).replace(/\/+$/, '');
+
+const connectOrigins = ["'self'"];
+if (apiDestination.startsWith('http')) {
+  try {
+    const parsed = new URL(apiDestination);
+    connectOrigins.push(parsed.origin);
+  } catch {}
+}
+
 const config: NextConfig = {
   async rewrites() {
-    return [{ source: '/api/v1/:path*', destination: 'http://127.0.0.1:4000/api/v1/:path*' }];
+    return [{ source: '/api/v1/:path*', destination: `${apiDestination}/api/v1/:path*` }];
   },
   async headers() {
     return [
@@ -18,10 +33,10 @@ const config: NextConfig = {
               "default-src 'self'",
               "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-              "img-src 'self' data: blob:",
+              "img-src 'self' data: blob: https:",
               "media-src 'self' data: blob:",
               "font-src 'self' https://fonts.gstatic.com",
-              "connect-src 'self'",
+              `connect-src ${connectOrigins.join(' ')}`,
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'",
@@ -38,3 +53,4 @@ const config: NextConfig = {
   poweredByHeader: false,
 };
 export default config;
+

@@ -64,19 +64,7 @@ const columns: ModuleColumn[] = [
   { id: 'age', label: 'Age / Gender' },
   { id: 'department', label: 'Department' },
   { id: 'doctor', label: 'Attending Doctor' },
-  {
-    id: 'status',
-    label: 'Status',
-    render: (row) => (
-      <Box sx={{
-        px: 1, py: 0.5, borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700, display: 'inline-block',
-        bgcolor: row.status === 'Admitted' ? '#FEF2F2' : '#F0FDF4',
-        color: row.status === 'Admitted' ? '#DC2626' : '#16A34A'
-      }}>
-        {row.status}
-      </Box>
-    ),
-  },
+  { id: 'status', label: 'Status' },
 ];
 
 const initialData = [

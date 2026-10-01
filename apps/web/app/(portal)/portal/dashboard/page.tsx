@@ -8,6 +8,7 @@ import CardContent from '@mui/material/CardContent';
 import Typography from '@mui/material/Typography';
 import Avatar from '@mui/material/Avatar';
 import Chip from '@mui/material/Chip';
+import { StatusBadge } from '../../../StatusBadge';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import Divider from '@mui/material/Divider';
@@ -262,6 +263,155 @@ export default function DashboardPage() {
         </Stack>
       </Stack>
 
+      {/* ─── Role-Specific Fast-Track Workspace Banner ─── */}
+      {user?.role === 'student' && (
+        <Paper
+          elevation={0}
+          sx={{
+            p: 2.5,
+            mb: 3,
+            borderRadius: '14px',
+            background: 'linear-gradient(135deg, #0F766E 0%, #115E59 100%)',
+            color: '#FFFFFF',
+            boxShadow: '0 10px 25px rgba(15,118,110,0.18)',
+          }}
+        >
+          <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ justifyContent: 'space-between', alignItems: { md: 'center' } }}>
+            <Box>
+              <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 0.5 }}>
+                <SchoolIcon sx={{ color: '#5EEAD4' }} />
+                <Typography sx={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: '1.15rem' }}>
+                  Student Academic Workspace
+                </Typography>
+                <Chip label="MBBS Phase II" size="small" sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: '#FFFFFF', fontWeight: 700 }} />
+              </Stack>
+              <Typography sx={{ fontSize: '0.85rem', color: '#CCFBF1', maxWidth: 640 }}>
+                Manage your clinical CBME logbook, semester attendance, university examinations, hostel room allotment, and published result cards.
+              </Typography>
+            </Box>
+            <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
+              <Button
+                variant="contained"
+                onClick={() => router.push('/portal/student')}
+                sx={{
+                  bgcolor: '#FFFFFF',
+                  color: '#0F766E',
+                  fontWeight: 800,
+                  fontSize: '0.8125rem',
+                  textTransform: 'none',
+                  px: 2,
+                  '&:hover': { bgcolor: '#F0FDFA' },
+                }}
+              >
+                Open Full Student Portal →
+              </Button>
+              <Button
+                variant="outlined"
+                onClick={() => router.push('/portal/attendance')}
+                sx={{
+                  borderColor: 'rgba(255,255,255,0.4)',
+                  color: '#FFFFFF',
+                  fontWeight: 700,
+                  fontSize: '0.8125rem',
+                  textTransform: 'none',
+                  '&:hover': { borderColor: '#FFFFFF', bgcolor: 'rgba(255,255,255,0.1)' },
+                }}
+              >
+                My Attendance
+              </Button>
+              <Button
+                variant="outlined"
+                onClick={() => router.push('/portal/results')}
+                sx={{
+                  borderColor: 'rgba(255,255,255,0.4)',
+                  color: '#FFFFFF',
+                  fontWeight: 700,
+                  fontSize: '0.8125rem',
+                  textTransform: 'none',
+                  '&:hover': { borderColor: '#FFFFFF', bgcolor: 'rgba(255,255,255,0.1)' },
+                }}
+              >
+                Exam Results
+              </Button>
+            </Stack>
+          </Stack>
+        </Paper>
+      )}
+
+      {(user?.role === 'faculty' || user?.role === 'doctor') && (
+        <Paper
+          elevation={0}
+          sx={{
+            p: 2.5,
+            mb: 3,
+            borderRadius: '14px',
+            background: 'linear-gradient(135deg, #1E293B 0%, #0F172A 100%)',
+            color: '#FFFFFF',
+            boxShadow: '0 10px 25px rgba(15,23,42,0.18)',
+          }}
+        >
+          <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ justifyContent: 'space-between', alignItems: { md: 'center' } }}>
+            <Box>
+              <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 0.5 }}>
+                <HospitalIcon sx={{ color: '#38BDF8' }} />
+                <Typography sx={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: '1.15rem' }}>
+                  Doctor &amp; Clinical Consultant Console
+                </Typography>
+                <Chip label={user?.department || 'Clinical Services'} size="small" sx={{ bgcolor: 'rgba(56,189,248,0.2)', color: '#38BDF8', fontWeight: 700 }} />
+              </Stack>
+              <Typography sx={{ fontSize: '0.85rem', color: '#94A3B8', maxWidth: 640 }}>
+                Access live OPD triage tokens, inpatient rounds, digital prescriptions, and student intern competency sign-offs.
+              </Typography>
+            </Box>
+            <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
+              <Button
+                variant="contained"
+                onClick={() => router.push('/portal/doctor')}
+                sx={{
+                  bgcolor: '#0F766E',
+                  color: '#FFFFFF',
+                  fontWeight: 800,
+                  fontSize: '0.8125rem',
+                  textTransform: 'none',
+                  px: 2,
+                  '&:hover': { bgcolor: '#0D6760' },
+                }}
+              >
+                Launch Doctor Console →
+              </Button>
+              <Button
+                variant="outlined"
+                onClick={() => router.push('/portal/opd')}
+                sx={{
+                  borderColor: 'rgba(255,255,255,0.25)',
+                  color: '#FFFFFF',
+                  fontWeight: 700,
+                  fontSize: '0.8125rem',
+                  textTransform: 'none',
+                  '&:hover': { borderColor: '#FFFFFF', bgcolor: 'rgba(255,255,255,0.06)' },
+                }}
+              >
+                OPD Queue
+              </Button>
+              <Button
+                variant="outlined"
+                onClick={() => router.push('/portal/internship')}
+                sx={{
+                  borderColor: 'rgba(255,255,255,0.25)',
+                  color: '#FFFFFF',
+                  fontWeight: 700,
+                  fontSize: '0.8125rem',
+                  textTransform: 'none',
+                  '&:hover': { borderColor: '#FFFFFF', bgcolor: 'rgba(255,255,255,0.06)' },
+                }}
+              >
+                Intern Logbooks
+              </Button>
+            </Stack>
+          </Stack>
+        </Paper>
+      )}
+
       {/* ─── KPI Row ─── */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid size={{ xs: 6, sm: 4, lg: 2 }}>
@@ -360,7 +510,7 @@ export default function DashboardPage() {
                           </Box>
                         </Stack>
                       </TableCell>
-                      <TableCell><Chip label="MBBS" size="small" sx={{ bgcolor: alpha('#0F766E', 0.1), color: '#0F766E' }} /></TableCell>
+                      <TableCell><StatusBadge status="MBBS" tone="teal" /></TableCell>
                       <TableCell><Typography variant="body2">Anatomy</Typography></TableCell>
                       <TableCell><Typography variant="caption" color="text.secondary">{dateStr}</Typography></TableCell>
                     </TableRow>
@@ -515,12 +665,9 @@ export default function DashboardPage() {
                         {mod.icon}
                       </Avatar>
                       <Typography variant="body2" sx={{ fontWeight: 600 }}>{mod.label}</Typography>
-                      <Chip
-                        label={mod.status}
-                        size="small"
-                        color="success"
-                        sx={{ mt: 0.5 }}
-                      />
+                      <Box sx={{ mt: 0.5 }}>
+                        <StatusBadge status={mod.status} />
+                      </Box>
                     </Box>
                   </Grid>
                 ))}

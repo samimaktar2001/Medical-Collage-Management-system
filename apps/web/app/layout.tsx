@@ -40,7 +40,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ThemeRegistry>
           {children}
         </ThemeRegistry>
-        <Toaster position="top-right" toastOptions={{ style: { fontSize: '14px', borderRadius: '8px' } }} />
+        <Toaster
+          position="top-right"
+          containerStyle={{ zIndex: 99999 }}
+          toastOptions={{
+            style: {
+              fontSize: '14px',
+              borderRadius: '10px',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+              fontWeight: 500,
+            },
+          }}
+        />
       </body>
     </html>
   );

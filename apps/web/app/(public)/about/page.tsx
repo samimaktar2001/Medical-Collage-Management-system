@@ -14,6 +14,7 @@ import Avatar from '@mui/material/Avatar';
 import Divider from '@mui/material/Divider';
 import Paper from '@mui/material/Paper';
 import IconButton from '@mui/material/IconButton';
+import toast from 'react-hot-toast';
 
 // Icons
 import SchoolIcon from '@mui/icons-material/School';
@@ -284,7 +285,7 @@ export default function AboutPage() {
                       <Typography sx={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)' }}>PDF Document • {doc.size}</Typography>
                     </Box>
                   </Stack>
-                  <IconButton size="small" onClick={() => alert(`Downloading verified document: ${doc.title}`)} sx={{ color: '#5EEAD4' }}>
+                  <IconButton size="small" onClick={() => toast.success(`Downloading verified document: ${doc.title}`)} sx={{ color: '#5EEAD4' }}>
                     <FileDownloadIcon fontSize="small" />
                   </IconButton>
                 </Box>

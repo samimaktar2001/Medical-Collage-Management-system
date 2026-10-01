@@ -20,6 +20,7 @@ import {
   TextField,
   InputAdornment,
 } from '@mui/material';
+import toast from 'react-hot-toast';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import NewspaperIcon from '@mui/icons-material/Newspaper';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
@@ -388,7 +389,7 @@ export default function NewsPage() {
                 onClick={() => {
                   if (navigator.clipboard) {
                     navigator.clipboard.writeText(window.location.href);
-                    alert('Article link copied to clipboard!');
+                    toast.success('Article link copied to clipboard!');
                   }
                 }}
                 sx={{ borderColor: '#CBD5E1', color: '#334155', textTransform: 'none' }}

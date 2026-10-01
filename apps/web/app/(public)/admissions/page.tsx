@@ -21,6 +21,7 @@ import SchoolIcon from '@mui/icons-material/School';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ContactSupportIcon from '@mui/icons-material/ContactSupport';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import toast from 'react-hot-toast';
 
 import { INSTITUTION_INFO } from '../public-data';
 
@@ -65,8 +66,10 @@ export default function AdmissionsPage() {
       if (!res.ok) {
         throw new Error(result.message || result.error?.message || 'Unable to register admission inquiry.');
       }
+      toast.success('Admission inquiry submitted! Our counseling desk will contact you.');
       setSubmitted(true);
     } catch (err: any) {
+      toast.error(err.message || 'Unable to connect to server. Please try again.');
       setErrorMsg(err.message || 'Unable to connect to server. Please try again.');
     } finally {
       setSubmitting(false);
@@ -196,10 +199,10 @@ export default function AdmissionsPage() {
                 Fees are regulated by the State Fee Regulatory Committee. Meritorious students ranking in the top 500 of State NEET are eligible for the Chairman’s Merit Scholarship covering 50% tuition waiver.
               </Typography>
               <Stack direction="row" spacing={2} sx={{ flexWrap: 'wrap' }}>
-                <Button variant="outlined" startIcon={<FileDownloadIcon />} onClick={() => alert('Downloading Fee Schedule PDF')} sx={{ borderColor: '#0F766E', color: '#0F766E', fontWeight: 700, borderRadius: '8px', textTransform: 'none' }}>
+                <Button variant="outlined" startIcon={<FileDownloadIcon />} onClick={() => toast.success('Downloading Fee Schedule PDF')} sx={{ borderColor: '#0F766E', color: '#0F766E', fontWeight: 700, borderRadius: '8px', textTransform: 'none' }}>
                   Download Fee Structure PDF
                 </Button>
-                <Button variant="outlined" startIcon={<FileDownloadIcon />} onClick={() => alert('Downloading Bond Proforma PDF')} sx={{ borderColor: '#0F766E', color: '#0F766E', fontWeight: 700, borderRadius: '8px', textTransform: 'none' }}>
+                <Button variant="outlined" startIcon={<FileDownloadIcon />} onClick={() => toast.success('Downloading Bond Proforma PDF')} sx={{ borderColor: '#0F766E', color: '#0F766E', fontWeight: 700, borderRadius: '8px', textTransform: 'none' }}>
                   Download Service Bond Format
                 </Button>
               </Stack>

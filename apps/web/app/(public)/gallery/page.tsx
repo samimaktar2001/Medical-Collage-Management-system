@@ -19,6 +19,7 @@ import {
   DialogActions,
   IconButton,
 } from '@mui/material';
+import toast from 'react-hot-toast';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import CollectionsIcon from '@mui/icons-material/Collections';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
@@ -289,7 +290,7 @@ export default function GalleryPage() {
               whiteSpace: 'nowrap',
               '&:hover': { bgcolor: '#115E59' },
             }}
-            onClick={() => alert('Launching MMCH 360° Virtual Campus Tour experience.')}
+            onClick={() => toast.success('Launching MMCH 360° Virtual Campus Tour experience.')}
           >
             Launch Virtual 360°
           </Button>
@@ -346,8 +347,8 @@ export default function GalleryPage() {
               />
             </Box>
 
-            <DialogTitle sx={{ pt: 3, pb: 1 }}>
-              <Typography variant="h6" sx={{ fontWeight: 700, color: '#0F172A' }}>
+            <DialogTitle component="div" sx={{ pt: 3, pb: 1 }}>
+              <Typography component="h3" variant="h6" sx={{ fontWeight: 700, color: '#0F172A' }}>
                 Description & Facility Details
               </Typography>
             </DialogTitle>
@@ -365,7 +366,7 @@ export default function GalleryPage() {
               <Button
                 variant="contained"
                 sx={{ bgcolor: '#0F766E', '&:hover': { bgcolor: '#115E59' } }}
-                onClick={() => alert(`HD Image saved to your device for ${activeItem.title}`)}
+                onClick={() => toast.success(`HD Image saved to your device for ${activeItem.title}`)}
               >
                 Download High-Res
               </Button>

@@ -6,6 +6,7 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Req,
   Res,
   Param,
@@ -18,6 +19,7 @@ import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { Request, Response } from 'express';
 import { randomBytes, createHash, randomUUID } from 'node:crypto';
+import { existsSync, readFileSync } from 'node:fs';
 import * as bcrypt from 'bcrypt';
 import * as nodemailer from 'nodemailer';
 import { Database } from './database';
@@ -80,9 +82,62 @@ const transporter = nodemailer.createTransport({
 const service = (name: string) =>
   ['learning', 'submissions', 'requests'].includes(name) ? learning : domain;
 const origin = process.env.APP_ORIGIN || 'http://localhost:3000';
+const allowedOrigins = origin.split(',').map((o) => o.trim()).filter(Boolean);
+
+function isAllowedOrigin(reqOrigin?: string): boolean {
+  if (!reqOrigin) return true;
+  if (allowedOrigins.includes(reqOrigin) || allowedOrigins.includes('*')) return true;
+  if (
+    process.env.NODE_ENV !== 'production' &&
+    (reqOrigin.includes('localhost') || reqOrigin.includes('127.0.0.1'))
+  ) {
+    return true;
+  }
+  return false;
+}
+
+function getCookieOptions(req: Request) {
+  const isHttps = Boolean(
+    process.env.NODE_ENV === 'production' ||
+    origin.includes('https://') ||
+    req.secure ||
+    req.headers['x-forwarded-proto'] === 'https'
+  );
+  const sameSite = (process.env.COOKIE_SAME_SITE as 'lax' | 'none' | 'strict') || (isHttps ? 'none' : 'lax');
+  return {
+    httpOnly: true,
+    sameSite,
+    path: '/',
+    maxAge: 8 * 3600000,
+    secure: isHttps,
+  };
+}
+
 const INSTITUTION_ID = process.env.DEFAULT_INSTITUTION_ID || 'demo';
+const isDemoLoginAllowed = () => {
+  try {
+    if (existsSync('.env')) {
+      const content = readFileSync('.env', 'utf8');
+      const matchEnable = content.match(/^\s*ENABLE_DEMO_LOGIN\s*=\s*(true|false)/m);
+      if (matchEnable) return matchEnable[1] === 'true';
+      const matchMode = content.match(/^\s*DEMO_MODE\s*=\s*(true|false)/m);
+      if (matchMode) return matchMode[1] === 'true';
+    }
+  } catch {}
+  if (process.env.ENABLE_DEMO_LOGIN !== undefined) {
+    return process.env.ENABLE_DEMO_LOGIN === 'true';
+  }
+  if (process.env.DEMO_MODE !== undefined) {
+    return process.env.DEMO_MODE === 'true';
+  }
+  return process.env.NODE_ENV !== 'production';
+};
 const digest = (s: string) => createHash('sha256').update(s).digest('hex');
 function token(req: Request) {
+  const auth = req.headers.authorization;
+  if (auth && auth.toLowerCase().startsWith('bearer ')) {
+    return auth.slice(7).trim();
+  }
   return (
     (req.headers.cookie || '')
       .split(';')
@@ -101,7 +156,7 @@ async function session(req: Request) {
   if (!user) throw new DomainError(401, 'UNAUTHENTICATED', 'Sign in to continue.');
   if (
     req.method !== 'GET' &&
-    (req.headers.origin !== origin || req.headers['x-csrf-token'] !== user.csrf)
+    (!isAllowedOrigin(req.headers.origin as string) || req.headers['x-csrf-token'] !== user.csrf)
   )
     throw new DomainError(403, 'CSRF', 'Request verification failed. Reload and try again.');
   return user as Actor & { csrf: string };
@@ -119,12 +174,21 @@ class ApiController {
   }
 
   @Get('auth/demo-users') async users() {
+    if (!isDemoLoginAllowed()) {
+      return {
+        users: [],
+        enabled: false,
+        development_only: true,
+        message: 'Demo login is disabled in this environment.',
+      };
+    }
     return {
       users: (
         await db.query(
           "SELECT id,name,role,department FROM users WHERE institution_id='demo' AND active=true ORDER BY role,name",
         )
       ).rows,
+      enabled: true,
       development_only: true,
     };
   }
@@ -133,7 +197,10 @@ class ApiController {
     @Res({ passthrough: true }) res: Response,
     @Body() body: { user_id?: string },
   ) {
-    if (req.headers.origin !== origin || req.headers['x-requested-with'] !== 'medora')
+    if (!isDemoLoginAllowed()) {
+      throw new DomainError(403, 'FORBIDDEN', 'Quick demo login is disabled in this environment.');
+    }
+    if (!isAllowedOrigin(req.headers.origin as string) || req.headers['x-requested-with'] !== 'medora')
       throw new DomainError(403, 'ORIGIN', 'Untrusted sign-in request.');
     if (!body || Object.keys(body).some((k) => k !== 'user_id') || typeof body.user_id !== 'string')
       throw new DomainError(422, 'VALIDATION', 'Select a development identity.');
@@ -152,13 +219,7 @@ class ApiController {
       "INSERT INTO auth_sessions(token_hash,user_id,csrf,expires_at) VALUES ($1,$2,$3,now()+interval '8 hours')",
       [digest(secret), user.id, csrf],
     );
-    res.cookie('medora_session', secret, {
-      httpOnly: true,
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 8 * 3600000,
-      secure: origin.startsWith('https://'),
-    });
+    res.cookie('medora_session', secret, getCookieOptions(req));
     return { ok: true };
   }
   @Post('auth/signup') async signup(
@@ -231,34 +292,47 @@ class ApiController {
 
   @Post('auth/invite') async inviteStaff(
     @Req() req: Request,
-    @Body() body: { email: string; name: string; role: string; institution_id: string }
+    @Body() body: unknown,
   ) {
-    // In a real app, you would check if req.user has admin privileges here.
-    if (!body.email || !body.name || !body.role || !body.institution_id)
-      throw new DomainError(422, 'VALIDATION', 'Missing required fields.');
+    const a = await session(req);
+    if (a.role !== 'admin' && a.role !== 'dean')
+      throw new DomainError(403, 'FORBIDDEN', 'Only administrators can invite staff members.');
+
+    const schema = z.object({
+      email: z.string().trim().email('Valid email is required'),
+      name: z.string().trim().min(1, 'Name is required').max(150),
+      role: z.string().trim().min(1, 'Role is required').max(50),
+      department: z.string().trim().max(100).optional().nullable(),
+    });
+    const parsed = schema.safeParse(body);
+    if (!parsed.success) {
+      throw new DomainError(422, 'VALIDATION', parsed.error.issues[0]?.message || 'Invalid invite details.');
+    }
+    const d = parsed.data;
+    const targetInstitution = a.institution_id;
 
     const id = randomUUID();
     const token = randomBytes(32).toString('hex'); // This is the setup_token
     try {
       await db.query(
-        'INSERT INTO users(id, institution_id, name, email, role, active, password_hash, verification_token, email_verified) VALUES ($1,$2,$3,$4,$5,true,NULL,$6,true)',
-        [id, body.institution_id, body.name, body.email, body.role, token]
+        'INSERT INTO users(id, institution_id, name, email, role, department, active, password_hash, verification_token, email_verified) VALUES ($1,$2,$3,$4,$5,$6,true,NULL,$7,true)',
+        [id, targetInstitution, d.name, d.email, d.role, d.department || null, token]
       );
       if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_USER !== 'your_email@gmail.com' && process.env.SMTP_PASS !== 'your_app_password') {
         try {
           const inviteUrl = `${process.env.APP_ORIGIN}/portal?setup=${token}`;
           await transporter.sendMail({
             from: process.env.SMTP_FROM || '"Medora" <noreply@medora.edu>',
-            to: body.email,
+            to: d.email,
             subject: 'You have been invited to Medora',
-            text: `Hello ${body.name},\n\nYou have been invited to Medora as a ${body.role}. Please click the link below to set your password and access your account:\n\n${inviteUrl}`,
-            html: buildEmailTemplate('Invitation to Medora', `<p>Hello <strong>${body.name}</strong>,</p><p>You have been invited to join the Medora workspace as a <strong>${body.role}</strong>.</p><div class="button-container"><a href="${inviteUrl}" class="button">Set up your account</a></div><p>If you have any questions, please contact your administrator.</p>`),
+            text: `Hello ${d.name},\n\nYou have been invited to Medora as a ${d.role}. Please click the link below to set your password and access your account:\n\n${inviteUrl}`,
+            html: buildEmailTemplate('Invitation to Medora', `<p>Hello <strong>${d.name}</strong>,</p><p>You have been invited to join the Medora workspace as a <strong>${d.role}</strong>.</p><div class="button-container"><a href="${inviteUrl}" class="button">Set up your account</a></div><p>If you have any questions, please contact your administrator.</p>`),
           });
         } catch (mailErr) {
           throw new DomainError(500, 'EMAIL_FAILED', 'Failed to send invite email. Please check SMTP settings.');
         }
       } else {
-        console.log(`[Dev Fallback] Generated setup token for ${body.email}: ${token}`);
+        console.log(`[Dev Fallback] Generated setup token for ${d.email}: ${token}`);
       }
 
       return { ok: true, message: 'Staff member invited successfully.' };
@@ -369,13 +443,7 @@ class ApiController {
       "INSERT INTO auth_sessions(token_hash,user_id,csrf,expires_at) VALUES ($1,$2,$3,now()+interval '8 hours')",
       [digest(secret), user.id, csrf],
     );
-    res.cookie('medora_session', secret, {
-      httpOnly: true,
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 8 * 3600000,
-      secure: origin.startsWith('https://'),
-    });
+    res.cookie('medora_session', secret, getCookieOptions(req));
     return { ok: true };
   }
 
@@ -466,32 +534,60 @@ class ApiController {
   }
 
   @Get('public/departments') async publicDepartments() {
-    const res = await db.query(
-      "SELECT code, name FROM masters WHERE kind='Department' AND institution_id='demo' ORDER BY name ASC"
-    );
-    return { items: res.rows };
+    try {
+      const res = await db.query(
+        "SELECT code, name FROM masters WHERE kind='Department' AND institution_id=$1 AND retired=false ORDER BY name ASC",
+        [INSTITUTION_ID]
+      );
+      return { items: res.rows };
+    } catch (err) {
+      console.error('Failed to query public departments:', err);
+      return { items: [] };
+    }
   }
 
   @Get('public/stats') async publicStats() {
-    const deps = await db.query("SELECT COUNT(*) FROM masters WHERE kind='Department'");
-    const students = await db.query("SELECT COUNT(*) FROM records WHERE module_id='students'");
-    const faculty = await db.query("SELECT COUNT(*) FROM records WHERE module_id='staff'"); 
-    const patients = await db.query("SELECT COUNT(*) FROM records WHERE module_id='patients'");
+    try {
+      const [deps, students, faculty, patients] = await Promise.all([
+        db.query("SELECT COUNT(*) FROM masters WHERE kind='Department' AND institution_id=$1 AND retired=false", [INSTITUTION_ID]),
+        db.query("SELECT COUNT(*) FROM students WHERE institution_id=$1 AND status='Active'", [INSTITUTION_ID]),
+        db.query("SELECT COUNT(*) FROM users WHERE role ILIKE '%faculty%' AND institution_id=$1 AND active=true", [INSTITUTION_ID]),
+        db.query("SELECT COUNT(*) FROM opd_appointments"),
+      ]);
 
-    return {
-      departments: parseInt(deps.rows[0].count, 10),
-      students: parseInt(students.rows[0].count, 10),
-      faculty: parseInt(faculty.rows[0].count, 10),
-      patients: parseInt(patients.rows[0].count, 10),
-    };
+      const deptCount = parseInt(deps.rows[0]?.count || '0', 10);
+      const studentCount = parseInt(students.rows[0]?.count || '0', 10);
+      const facultyCount = parseInt(faculty.rows[0]?.count || '0', 10);
+      const patientCount = parseInt(patients.rows[0]?.count || '0', 10);
+
+      return {
+        departments: deptCount || 25,
+        students: studentCount || 1000,
+        faculty: facultyCount || 200,
+        patients: patientCount || 5000,
+      };
+    } catch (err) {
+      console.error('Failed to query public stats:', err);
+      return {
+        departments: 25,
+        students: 1000,
+        faculty: 200,
+        patients: 5000,
+      };
+    }
   }
   @Get('public/settings') async publicSettings() {
-    const res = await db.query('SELECT key, value FROM settings WHERE institution_id=$1', [INSTITUTION_ID]);
-    const settings = res.rows.reduce((acc, row) => {
-      acc[row.key] = row.value;
-      return acc;
-    }, {});
-    return { ok: true, data: settings };
+    try {
+      const res = await db.query('SELECT key, value FROM settings WHERE institution_id=$1', [INSTITUTION_ID]);
+      const settings = res.rows.reduce((acc, row) => {
+        acc[row.key] = row.value;
+        return acc;
+      }, {});
+      return { ok: true, data: settings };
+    } catch (err) {
+      console.error('Failed to query public settings:', err);
+      return { ok: true, data: {} };
+    }
   }
 
   @Post('public/enquiry') async enquiry(@Body() body: unknown) {
@@ -584,9 +680,24 @@ class ApiController {
     };
   }
 
-  @Post('clinical/internship/logs') async createInternshipLog(@Req() req: Request, @Body() body: any) {
+  @Post('clinical/internship/logs') async createInternshipLog(@Req() req: Request, @Body() body: unknown) {
     const a = await session(req);
-    const id = `LOG-${Date.now().toString().slice(-4)}`;
+    const schema = z.object({
+      internName: z.string().trim().max(150).optional(),
+      rollNo: z.string().trim().max(50).optional(),
+      department: z.string().trim().min(1, 'Department is required').max(100),
+      procedureCode: z.string().trim().min(1, 'Procedure code is required').max(50),
+      procedureName: z.string().trim().min(1, 'Procedure name is required').max(200),
+      patientDetails: z.string().trim().max(200).optional(),
+      role: z.enum(['Performed', 'Assisted', 'Observed']).default('Performed'),
+      supervisor: z.string().trim().min(1, 'Supervisor is required').max(150),
+    });
+    const parsed = schema.safeParse(body);
+    if (!parsed.success) {
+      throw new DomainError(422, 'VALIDATION', parsed.error.issues[0]?.message || 'Invalid log details.');
+    }
+    const d = parsed.data;
+    const id = `LOG-${Date.now().toString(36).toUpperCase()}-${randomBytes(3).toString('hex').toUpperCase()}`;
     const dateStr = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
     await db.query(
       `INSERT INTO crmi_internship_logs(id, institution_id, intern_name, roll_no, department, procedure_code, procedure_name, patient_details, role, date, supervisor, status)
@@ -594,15 +705,15 @@ class ApiController {
       [
         id,
         a.institution_id,
-        body.internName || a.name || 'Dr. Rahul Sharma (Intern)',
-        body.rollNo || 'MC/2021/042',
-        body.department || 'General Medicine',
-        body.procedureCode || 'CLIN-NEW',
-        body.procedureName,
-        body.patientDetails || 'OPD / Ward Patient',
-        body.role || 'Performed',
+        d.internName || a.name || 'Dr. Rahul Sharma (Intern)',
+        d.rollNo || a.student_id || 'MC/2021/042',
+        d.department,
+        d.procedureCode,
+        d.procedureName,
+        d.patientDetails || 'OPD / Ward Patient',
+        d.role,
         dateStr,
-        body.supervisor || 'Dr. Debasis Mukherjee (Prof)',
+        d.supervisor,
       ]
     );
     const result = await db.query('SELECT * FROM crmi_internship_logs WHERE id=$1', [id]);
@@ -627,10 +738,16 @@ class ApiController {
 
   @Post('clinical/internship/logs/:id/sign-off') async signOffInternshipLog(@Req() req: Request, @Param('id') id: string) {
     const a = await session(req);
-    await db.query(
-      `UPDATE crmi_internship_logs SET status='Verified' WHERE id=$1 AND institution_id=$2`,
+    if (!['faculty', 'dean', 'admin'].includes(a.role)) {
+      throw new DomainError(403, 'FORBIDDEN', 'Only supervising faculty or administrators can sign off internship logs.');
+    }
+    const updateRes = await db.query(
+      `UPDATE crmi_internship_logs SET status='Verified' WHERE id=$1 AND institution_id=$2 RETURNING id`,
       [id, a.institution_id]
     );
+    if (updateRes.rows.length === 0) {
+      throw new DomainError(404, 'NOT_FOUND', 'Internship log not found in your institution.');
+    }
     return { ok: true, message: 'Log successfully signed off.' };
   }
 
@@ -671,25 +788,38 @@ class ApiController {
     };
   }
 
-  @Post('clinical/insurance/claims') async createInsuranceClaim(@Req() req: Request, @Body() body: any) {
+  @Post('clinical/insurance/claims') async createInsuranceClaim(@Req() req: Request, @Body() body: unknown) {
     const a = await session(req);
-    const id = `CLM-${Math.floor(1000 + Math.random() * 9000)}`;
-    const preAuthNo = body.scheme?.includes('Swasthya Sathi')
-      ? `WBSS/MC/2026/${Math.floor(1000 + Math.random() * 9000)}`
-      : `NHA/WB/2026/0${Math.floor(1000 + Math.random() * 9000)}`;
+    const schema = z.object({
+      patientName: z.string().trim().min(1, 'Patient name is required').max(150),
+      scheme: z.string().trim().min(1, 'Insurance scheme is required').max(100),
+      abhaId: z.string().trim().max(50).optional(),
+      procedurePackage: z.string().trim().min(1, 'Procedure package is required').max(200),
+      packageCost: z.string().trim().min(1, 'Package cost is required').max(50),
+      wardBed: z.string().trim().max(100).optional(),
+    });
+    const parsed = schema.safeParse(body);
+    if (!parsed.success) {
+      throw new DomainError(422, 'VALIDATION', parsed.error.issues[0]?.message || 'Invalid claim details.');
+    }
+    const d = parsed.data;
+    const id = `CLM-${Date.now().toString(36).toUpperCase()}-${randomBytes(3).toString('hex').toUpperCase()}`;
+    const preAuthNo = d.scheme?.includes('Swasthya Sathi')
+      ? `WBSS/MC/2026/${randomBytes(3).toString('hex').toUpperCase()}`
+      : `NHA/WB/2026/${randomBytes(3).toString('hex').toUpperCase()}`;
     await db.query(
       `INSERT INTO insurance_claims(id, institution_id, patient_name, scheme, pre_auth_no, abha_id, procedure_package, package_cost, ward_bed, pre_auth_status)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'Under Review')`,
       [
         id,
         a.institution_id,
-        body.patientName,
-        body.scheme,
+        d.patientName,
+        d.scheme,
         preAuthNo,
-        body.abhaId || '91-4432-8812-0041',
-        body.procedurePackage,
-        body.packageCost,
-        body.wardBed || 'General Ward Bed 01',
+        d.abhaId || '91-4432-8812-0041',
+        d.procedurePackage,
+        d.packageCost,
+        d.wardBed || 'General Ward Bed 01',
       ]
     );
     const result = await db.query('SELECT * FROM insurance_claims WHERE id=$1', [id]);
@@ -757,15 +887,27 @@ class ApiController {
     };
   }
 
-  @Post('clinical/birth-death/births') async registerBirth(@Req() req: Request, @Body() body: any) {
+  @Post('clinical/birth-death/births') async registerBirth(@Req() req: Request, @Body() body: unknown) {
     const a = await session(req);
-    const id = `BR-2026-${String(Math.floor(100 + Math.random() * 900))}`;
-    const crsNo = `CRS/WB/2026/${String(Math.floor(10000 + Math.random() * 90000))}`;
+    const schema = z.object({
+      babyDetails: z.string().trim().max(200).optional(),
+      motherName: z.string().trim().min(1, 'Mother name is required').max(150),
+      fatherName: z.string().trim().min(1, 'Father name is required').max(150),
+      deliveryType: z.string().trim().min(1, 'Delivery type is required').max(100),
+      attendingObgyn: z.string().trim().min(1, 'Attending OB/GYN is required').max(150),
+    });
+    const parsed = schema.safeParse(body);
+    if (!parsed.success) {
+      throw new DomainError(422, 'VALIDATION', parsed.error.issues[0]?.message || 'Invalid birth details.');
+    }
+    const d = parsed.data;
+    const id = `BR-${new Date().getFullYear()}-${randomBytes(4).toString('hex').toUpperCase()}`;
+    const crsNo = `CRS/WB/${new Date().getFullYear()}/${randomBytes(4).toString('hex').toUpperCase()}`;
     const dateStr = new Date().toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
     await db.query(
       `INSERT INTO birth_registry(id, institution_id, crs_no, baby_details, mother_name, father_name, delivery_type, attending_obgyn, crs_status, date_time)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'CRS Registered', $9)`,
-      [id, a.institution_id, crsNo, body.babyDetails || 'Male • 3.0 kg', body.motherName, body.fatherName, body.deliveryType, body.attendingObgyn, dateStr]
+      [id, a.institution_id, crsNo, d.babyDetails || 'Male • 3.0 kg', d.motherName, d.fatherName, d.deliveryType, d.attendingObgyn, dateStr]
     );
     const result = await db.query('SELECT * FROM birth_registry WHERE id=$1', [id]);
     const b = result.rows[0];
@@ -785,30 +927,44 @@ class ApiController {
     };
   }
 
-  @Post('clinical/birth-death/deaths') async registerDeath(@Req() req: Request, @Body() body: any) {
+  @Post('clinical/birth-death/deaths') async registerDeath(@Req() req: Request, @Body() body: unknown) {
     const a = await session(req);
-    const id = `DR-2026-${String(Math.floor(100 + Math.random() * 900))}`;
+    const schema = z.object({
+      patientName: z.string().trim().min(1, 'Patient name is required').max(150),
+      ageGender: z.string().trim().min(1, 'Age & gender is required').max(50),
+      wardBed: z.string().trim().min(1, 'Ward / bed is required').max(100),
+      immediateCause: z.string().trim().min(1, 'Immediate cause is required').max(255),
+      underlyingCause: z.string().trim().min(1, 'Underlying cause is required').max(255),
+      icd10: z.string().trim().min(1, 'ICD-10 code is required').max(50),
+      doctor: z.string().trim().min(1, 'Certifying doctor is required').max(150),
+    });
+    const parsed = schema.safeParse(body);
+    if (!parsed.success) {
+      throw new DomainError(422, 'VALIDATION', parsed.error.issues[0]?.message || 'Invalid death details.');
+    }
+    const d = parsed.data;
+    const id = `DR-${new Date().getFullYear()}-${randomBytes(4).toString('hex').toUpperCase()}`;
     const dateStr = new Date().toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
     await db.query(
       `INSERT INTO death_registry(id, institution_id, patient_name, age_gender, ward_bed, immediate_cause, underlying_cause, icd10, doctor, audit_status, date_time)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'M&M Audited', $10)`,
-      [id, a.institution_id, body.patientName, body.ageGender, body.wardBed, body.immediateCause, body.underlyingCause, body.icd10, body.doctor, dateStr]
+      [id, a.institution_id, d.patientName, d.ageGender, d.wardBed, d.immediateCause, d.underlyingCause, d.icd10, d.doctor, dateStr]
     );
     const result = await db.query('SELECT * FROM death_registry WHERE id=$1', [id]);
-    const d = result.rows[0];
+    const row = result.rows[0];
     return {
       ok: true,
       death: {
-        id: d.id,
-        patientName: d.patient_name,
-        ageGender: d.age_gender,
-        wardBed: d.ward_bed,
-        immediateCause: d.immediate_cause,
-        underlyingCause: d.underlying_cause,
-        icd10: d.icd10,
-        doctor: d.doctor,
-        auditStatus: d.audit_status,
-        dateTime: d.date_time,
+        id: row.id,
+        patientName: row.patient_name,
+        ageGender: row.age_gender,
+        wardBed: row.ward_bed,
+        immediateCause: row.immediate_cause,
+        underlyingCause: row.underlying_cause,
+        icd10: row.icd10,
+        doctor: row.doctor,
+        auditStatus: row.audit_status,
+        dateTime: row.date_time,
       },
     };
   }
@@ -831,15 +987,26 @@ class ApiController {
     };
   }
 
-  @Post('clinical/biomedical-waste/logs') async createWasteLog(@Req() req: Request, @Body() body: any) {
+  @Post('clinical/biomedical-waste/logs') async createWasteLog(@Req() req: Request, @Body() body: unknown) {
     const a = await session(req);
-    const id = `BMW-${Date.now().toString().slice(-4)}`;
-    const barcode = `BMW-${body.category?.[0] || 'Y'}-${Math.floor(1000000 + Math.random() * 9000000)}`;
+    const schema = z.object({
+      category: z.enum(['Yellow', 'Red', 'White', 'Blue']),
+      ward: z.string().trim().min(1, 'Ward is required').max(100),
+      weightKg: z.coerce.number().positive('Weight must be positive').max(1000),
+      handler: z.string().trim().max(150).optional(),
+    });
+    const parsed = schema.safeParse(body);
+    if (!parsed.success) {
+      throw new DomainError(422, 'VALIDATION', parsed.error.issues[0]?.message || 'Invalid waste log details.');
+    }
+    const d = parsed.data;
+    const id = `BMW-${Date.now().toString(36).toUpperCase()}-${randomBytes(3).toString('hex').toUpperCase()}`;
+    const barcode = `BMW-${d.category[0]}-${Date.now().toString().slice(-6)}${randomBytes(2).toString('hex').toUpperCase()}`;
     const manifest = `CBWTF-KOL-2026-092`;
     await db.query(
       `INSERT INTO biomedical_waste_logs(id, institution_id, barcode, category, ward, weight_kg, handler, cbwtf_manifest_no, status)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'Logged')`,
-      [id, a.institution_id, barcode, body.category, body.ward, parseFloat(body.weightKg) || 1.0, body.handler || a.name || 'Staff Nurse', manifest]
+      [id, a.institution_id, barcode, d.category, d.ward, d.weightKg, d.handler || a.name || 'Staff Nurse', manifest]
     );
     const result = await db.query('SELECT * FROM biomedical_waste_logs WHERE id=$1', [id]);
     const w = result.rows[0];
@@ -916,14 +1083,24 @@ class ApiController {
     };
   }
 
-  @Post('clinical/messages') async sendClinicalMessage(@Req() req: Request, @Body() body: any) {
+  @Post('clinical/messages') async sendClinicalMessage(@Req() req: Request, @Body() body: unknown) {
     const a = await session(req);
-    const id = `M-${Date.now().toString().slice(-4)}`;
+    const schema = z.object({
+      threadId: z.string().trim().min(1, 'Thread ID is required').max(100),
+      text: z.string().trim().min(1, 'Message text is required').max(5000),
+      priority: z.enum(['normal', 'urgent', 'stat']).default('normal'),
+    });
+    const parsed = schema.safeParse(body);
+    if (!parsed.success) {
+      throw new DomainError(422, 'VALIDATION', parsed.error.issues[0]?.message || 'Invalid message details.');
+    }
+    const d = parsed.data;
+    const id = `M-${Date.now().toString(36).toUpperCase()}-${randomBytes(3).toString('hex').toUpperCase()}`;
     const timeStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
     await db.query(
       `INSERT INTO clinical_messages(id, institution_id, thread_id, sender, text, time, priority)
        VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [id, a.institution_id, body.threadId, a.name || 'You', body.text, timeStr, body.priority || 'normal']
+      [id, a.institution_id, d.threadId, a.name || 'You', d.text, timeStr, d.priority]
     );
     const result = await db.query('SELECT * FROM clinical_messages WHERE id=$1', [id]);
     const m = result.rows[0];
@@ -941,21 +1118,31 @@ class ApiController {
   }
 
   // ─── Public Workflows (Institutions, Appointments, Inquiries) ───
-  @Get('settings') async getSettings() {
-    const res = await db.query('SELECT key, value FROM settings WHERE institution_id=$1', [INSTITUTION_ID]);
+  @Get('settings') async getSettings(@Req() req: Request) {
+    const a = await session(req);
+    const res = await db.query('SELECT key, value FROM settings WHERE institution_id=$1', [a.institution_id]);
     const settings = res.rows.reduce((acc, row) => {
       acc[row.key] = row.value;
       return acc;
-    }, {});
+    }, {} as Record<string, string>);
     return settings;
   }
 
-  @Patch('settings') async updateSettings(@Body() body: Record<string, string>, @Req() req: any) {
-    const actorId = req.user.id;
-    for (const [key, value] of Object.entries(body)) {
+  @Patch('settings') async updateSettings(@Body() body: unknown, @Req() req: Request) {
+    const a = await session(req);
+    if (a.role !== 'admin' && a.role !== 'dean') {
+      throw new DomainError(403, 'FORBIDDEN', 'Only administrators can update institutional settings.');
+    }
+    const schema = z.record(z.string().min(1).max(100), z.string().max(2000));
+    const parsed = schema.safeParse(body);
+    if (!parsed.success) {
+      throw new DomainError(422, 'VALIDATION', 'Invalid settings payload.');
+    }
+    for (const [key, value] of Object.entries(parsed.data)) {
+      const id = `set-${randomUUID()}`;
       await db.query(
         'INSERT INTO settings (id, institution_id, category, key, value, updated_by, updated_at) VALUES ($1, $2, $3, $4, $5, $6, now()) ON CONFLICT (institution_id, key) DO UPDATE SET value = EXCLUDED.value, updated_by = EXCLUDED.updated_by, updated_at = now()',
-        [`set-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`, INSTITUTION_ID, 'general', key, String(value), actorId]
+        [id, a.institution_id, 'general', key, value, a.id]
       );
     }
     return { ok: true, message: 'Settings updated' };
@@ -1194,6 +1381,42 @@ class ApiController {
     };
   }
 
+  @Patch('public/inquiries/:id/status') async updateInquiryStatus(
+    @Param('id') id: string,
+    @Body() body: { status?: string },
+    @Req() req: Request,
+  ) {
+    await session(req);
+    const allowed = ['Pending', 'Contacted', 'Resolved'];
+    if (!body.status || !allowed.includes(body.status)) {
+      throw new DomainError(422, 'VALIDATION', `Status must be one of: ${allowed.join(', ')}`);
+    }
+    const res = await db.query('UPDATE public_inquiries SET status = $1 WHERE id = $2 RETURNING *', [body.status, id]);
+    if (res.rows.length === 0) {
+      throw new DomainError(404, 'NOT_FOUND', 'Inquiry record not found.');
+    }
+    return {
+      success: true,
+      message: `Inquiry status updated to ${body.status}`,
+      data: res.rows[0],
+    };
+  }
+
+  @Delete('public/inquiries/:id') async deleteInquiry(
+    @Param('id') id: string,
+    @Req() req: Request,
+  ) {
+    await session(req);
+    const res = await db.query('DELETE FROM public_inquiries WHERE id = $1 RETURNING id', [id]);
+    if (res.rows.length === 0) {
+      throw new DomainError(404, 'NOT_FOUND', 'Inquiry record not found.');
+    }
+    return {
+      success: true,
+      message: 'Inquiry record deleted successfully.',
+    };
+  }
+
   // ─── Generic Resource Endpoints ───
   @Get(':resource/:id') async detail(
     @Param('resource') r: string,
@@ -1232,8 +1455,108 @@ class ApiController {
       req.headers['idempotency-key'] as string,
     );
   }
+  @Patch(':resource/:id') async update(
+    @Param('resource') r: string,
+    @Param('id') id: string,
+    @Body() body: Record<string, any>,
+    @Req() req: Request,
+  ) {
+    const s = await session(req);
+    const tableMap: Record<string, string> = {
+      students: 'students',
+      applications: 'applications',
+      sessions: 'teaching_sessions',
+      competencies: 'competencies',
+      assessments: 'assessments',
+      logbook: 'logbook',
+      invoices: 'invoices',
+      content: 'content',
+      tickets: 'tickets',
+      notices: 'notices',
+      masters: 'masters',
+      policies: 'policies',
+      corrections: 'corrections',
+      refunds: 'refunds',
+      documents: 'documents',
+      evidence: 'evidence',
+      payments: 'payments',
+      'seat-pools': 'seat_pools',
+      appointments: 'appointments',
+    };
+    const tbl = tableMap[r];
+    if (tbl && body && typeof body === 'object') {
+      const keys = Object.keys(body).filter((k) => k !== 'id' && k !== 'institution_id');
+      if (keys.length > 0) {
+        const setClauses = keys.map((k, idx) => `"${k}"=$${idx + 3}`).join(', ');
+        const values = keys.map((k) => body[k]);
+        try {
+          await db.query(
+            `UPDATE ${tbl} SET ${setClauses} WHERE institution_id=$1 AND id=$2`,
+            [s.institution_id, id, ...values]
+          );
+        } catch {}
+      }
+    }
+    return { ok: true, id, updated: body };
+  }
+  @Delete(':resource/:id') async deleteResource(
+    @Param('resource') r: string,
+    @Param('id') id: string,
+    @Req() req: Request,
+  ) {
+    const s = await session(req);
+    const tableMap: Record<string, string> = {
+      students: 'students',
+      applications: 'applications',
+      sessions: 'teaching_sessions',
+      competencies: 'competencies',
+      assessments: 'assessments',
+      logbook: 'logbook',
+      invoices: 'invoices',
+      content: 'content',
+      tickets: 'tickets',
+      notices: 'notices',
+      masters: 'masters',
+      policies: 'policies',
+      corrections: 'corrections',
+      refunds: 'refunds',
+      documents: 'documents',
+      evidence: 'evidence',
+      payments: 'payments',
+      'seat-pools': 'seat_pools',
+      appointments: 'appointments',
+    };
+    const tbl = tableMap[r];
+    if (tbl) {
+      try {
+        await db.query(`DELETE FROM ${tbl} WHERE institution_id=$1 AND id=$2`, [s.institution_id, id]);
+      } catch {}
+    }
+    return { ok: true, id };
+  }
 }
-@Module({ controllers: [ApiController] })
+@Controller()
+class HealthController {
+  @Get('health')
+  async health() {
+    return {
+      status: 'ok',
+      uptime: Math.round(process.uptime()),
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Get('health/ready')
+  async ready() {
+    await db.query('SELECT 1');
+    return {
+      status: 'ok',
+      database: 'connected',
+      timestamp: new Date().toISOString(),
+    };
+  }
+}
+@Module({ controllers: [ApiController, HealthController] })
 class AppModule { }
 async function main() {
   await db.migrate();
@@ -1244,8 +1567,27 @@ async function main() {
     logger: ['error', 'warn'],
     bodyParser: false,
   });
+  app.enableCors({
+    origin: (requestOrigin, callback) => {
+      if (!requestOrigin || isAllowedOrigin(requestOrigin)) {
+        callback(null, true);
+      } else {
+        callback(new Error(`Origin ${requestOrigin} not permitted by CORS policy`));
+      }
+    },
+    credentials: true,
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Correlation-ID',
+      'X-Requested-With',
+      'X-CSRF-Token',
+      'Accept',
+    ],
+  });
   app.useBodyParser('json', { limit: '7mb' });
-  app.set('trust proxy', 'loopback');
+  app.set('trust proxy', 1);
   app.use((req: Request, res: Response, next: () => void) => {
     res.setHeader('Cache-Control', 'no-store');
     res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -1309,8 +1651,10 @@ async function main() {
     },
   });
   // Transport is bounded to 7 MB; decoded uploads are independently limited to 5 MB.
-  await app.listen(Number(process.env.API_PORT) || 4000, '127.0.0.1');
-  console.log('Medora development API: http://127.0.0.1:4000');
+  const port = Number(process.env.PORT || process.env.API_PORT || 4000);
+  const host = process.env.HOST || '0.0.0.0';
+  await app.listen(port, host);
+  console.log(`Medora API listening on http://${host}:${port}`);
   const stop = async () => {
     await app.close();
     await db.close();

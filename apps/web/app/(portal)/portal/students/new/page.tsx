@@ -31,6 +31,8 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import CheckCircleOutlinedIcon from '@mui/icons-material/CheckCircleOutlined';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import PersonAddIcon from '@mui/icons-material/PersonAdd';
+import { PageHeader } from '../../../../PageHeader';
 import { useAuth, api } from '../../../PortalShell';
 
 const steps = [
@@ -429,18 +431,18 @@ export default function NewStudentAdmissionPage() {
 
   return (
     <Box sx={{ pb: 6 }}>
-      <Box sx={{ mb: 3 }}>
-        <Breadcrumbs sx={{ fontSize: '0.8125rem', mb: 1 }}>
-          <Link underline="hover" color="inherit" href="/portal/dashboard">Dashboard</Link>
-          <Link underline="hover" color="inherit" href="/portal/students">Students</Link>
-          <Typography color="text.primary" sx={{ fontSize: '0.8125rem', fontWeight: 600 }}>New Admission</Typography>
-        </Breadcrumbs>
-        <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
-          <Typography sx={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: { xs: '1.5rem', sm: '1.75rem', md: '1.875rem' }, color: '#0F172A', letterSpacing: '-0.025em' }}>
-            Student Admission Form
-          </Typography>
-        </Stack>
-      </Box>
+      {/* ─── Breadcrumbs & Header ─── */}
+      <PageHeader
+        breadcrumbs={[
+          { label: 'Dashboard', href: '/portal/dashboard' },
+          { label: 'Students', href: '/portal/students' },
+          { label: 'New Admission' },
+        ]}
+        category="Student Admissions Desk"
+        title="Student Admission & Enrollment Dossier"
+        description="Comprehensive 9-stage NMC institutional admission registration and digital document verification."
+        icon={<PersonAddIcon />}
+      />
 
       {/* Stepper with horizontal scrolling on mobile */}
       <Paper elevation={0} sx={{ p: 3, mb: 3.5, borderRadius: '12px', border: '1px solid #E2E8F0', overflowX: 'auto' }}>

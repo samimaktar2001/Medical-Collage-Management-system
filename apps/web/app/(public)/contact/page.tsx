@@ -17,6 +17,7 @@ import {
   MenuItem,
   Divider,
 } from '@mui/material';
+import toast from 'react-hot-toast';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import ContactSupportIcon from '@mui/icons-material/ContactSupport';
 import PhoneIcon from '@mui/icons-material/Phone';
@@ -81,8 +82,10 @@ export default function ContactPage() {
       if (!res.ok) {
         throw new Error(result.message || result.error?.message || 'Unable to register inquiry.');
       }
+      toast.success('Your message has been received! Our team will contact you shortly.');
       setSubmitted(true);
     } catch (err: any) {
+      toast.error(err.message || 'Unable to connect to server. Please try again.');
       setErrorMsg(err.message || 'Unable to connect to server. Please try again.');
     } finally {
       setSubmitting(false);

@@ -19,6 +19,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Grid from '@mui/material/Grid';
 import Paper from '@mui/material/Paper';
 import Divider from '@mui/material/Divider';
+import toast from 'react-hot-toast';
 import { MedoraDatePicker } from '../MedoraDatePicker';
 
 // Icons
@@ -45,7 +46,7 @@ type DemoUser = {
 
 export default function PortalAuthPage() {
   const router = useRouter();
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+  const [mode, setMode] = useState<'signin' | 'signup' | 'verify' | 'forgot'>('signin');
   const [loginMethod, setLoginMethod] = useState<'email' | 'phone'>('email');
   const [selectedRole, setSelectedRole] = useState<'student' | 'faculty' | 'staff' | 'patient'>('student');
 
@@ -65,19 +66,34 @@ export default function PortalAuthPage() {
   const [signUpConfirmPassword, setSignUpConfirmPassword] = useState('');
   const [agreeTerms, setAgreeTerms] = useState(false);
 
+  // Verification & Reset states
+  const [otpToken, setOtpToken] = useState('');
+  const [forgotEmail, setForgotEmail] = useState('');
+
   // Demo users state
   const [demoUsers, setDemoUsers] = useState<DemoUser[]>([]);
   const [authLoading, setAuthLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
+  const getRoleDestination = (role?: string) => {
+    const r = (role || '').toLowerCase();
+    if (r === 'student') return '/portal/student';
+    if (r === 'faculty' || r === 'doctor') return '/portal/doctor';
+    if (r === 'editor' || r === 'publisher') return '/portal/cms';
+    if (r === 'finance') return '/portal/finance';
+    return '/portal/dashboard';
+  };
+
   // Check if already authenticated
   useEffect(() => {
     fetch('/api/v1/auth/me', { credentials: 'same-origin' })
       .then((res) => {
-        if (res.ok) {
-          router.replace('/portal/dashboard');
-        }
+        if (res.ok) return res.json();
+        throw new Error('Not logged in');
+      })
+      .then((data) => {
+        router.replace(getRoleDestination(data?.role));
       })
       .catch(() => { });
   }, [router]);
@@ -98,6 +114,7 @@ export default function PortalAuthPage() {
     setAuthLoading(true);
     setErrorMsg(null);
     try {
+      const selected = demoUsers.find((u) => u.id === userId);
       const res = await fetch('/api/v1/auth/demo-login', {
         method: 'POST',
         headers: {
@@ -108,8 +125,10 @@ export default function PortalAuthPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error?.message || 'Login failed');
-      router.push('/portal/dashboard');
+      toast.success(`Signed in as ${selected?.name || 'User'} (${selected?.role || 'Staff'})!`);
+      router.push(getRoleDestination(selected?.role));
     } catch (err: any) {
+      toast.error(err.message || 'Demo login failed');
       setErrorMsg(err.message || 'Demo login failed');
       setAuthLoading(false);
     }
@@ -133,9 +152,30 @@ export default function PortalAuthPage() {
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error?.message || 'Invalid credentials');
-      router.push('/portal/dashboard');
+      if (!res.ok) {
+        if (data.error?.code === 'UNVERIFIED') {
+          toast.error('Email not verified. Please enter the OTP sent to your email.');
+          setErrorMsg('Please verify your email before logging in.');
+          setMode('verify');
+          setAuthLoading(false);
+          return;
+        }
+        throw new Error(data.error?.message || 'Invalid credentials');
+      }
+
+      let destination = '/portal/dashboard';
+      try {
+        const meRes = await fetch('/api/v1/auth/me', { credentials: 'same-origin' });
+        if (meRes.ok) {
+          const meData = await meRes.json();
+          destination = getRoleDestination(meData?.role);
+        }
+      } catch {}
+
+      toast.success('Welcome back! Loading your medical portal...');
+      router.push(destination);
     } catch (err: any) {
+      toast.error(err.message || 'Unable to sign in. Check credentials.');
       setErrorMsg(err.message || 'Unable to sign in. Check credentials or use Demo Login below.');
       setAuthLoading(false);
     }
@@ -144,14 +184,22 @@ export default function PortalAuthPage() {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (signUpPassword !== signUpConfirmPassword) {
+      toast.error('Passwords do not match');
       setErrorMsg('Passwords do not match');
       return;
     }
+    if (signUpPassword.length < 8) {
+      toast.error('Password must be at least 8 characters long');
+      setErrorMsg('Password must be at least 8 characters long');
+      return;
+    }
     if (signUpDob && new Date(signUpDob) > new Date()) {
+      toast.error('Date of birth cannot be in the future.');
       setErrorMsg('Date of birth cannot be in the future.');
       return;
     }
     if (!agreeTerms) {
+      toast.error('You must agree to the Terms & Conditions');
       setErrorMsg('You must agree to the Terms & Conditions');
       return;
     }
@@ -183,12 +231,70 @@ export default function PortalAuthPage() {
         if (!res.ok) throw new Error(text.slice(0, 100) || `Server error (${res.status})`);
       }
       if (!res.ok) throw new Error(data?.error?.message || 'Sign up failed');
-      setSuccessMsg('Account created successfully! You can now sign in.');
-      setMode('signin');
+      toast.success(data.message || 'Registration successful! Verification OTP sent to your email.');
+      setSuccessMsg('A 6-digit OTP code has been sent to ' + signUpEmail + '. Please enter it below to activate your account.');
       setEmail(signUpEmail);
+      setMode('verify');
       setAuthLoading(false);
     } catch (err: any) {
+      toast.error(err.message || 'Failed to create account.');
       setErrorMsg(err.message || 'Failed to create account.');
+      setAuthLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!otpToken.trim()) {
+      toast.error('Please enter the 6-digit OTP code.');
+      return;
+    }
+    setAuthLoading(true);
+    setErrorMsg(null);
+    try {
+      const res = await fetch('/api/v1/auth/verify-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: otpToken.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error?.message || 'Invalid or expired OTP');
+      toast.success('Email successfully verified! You can now sign in.');
+      setSuccessMsg('Email verified! Please enter your password to sign in.');
+      setMode('signin');
+      setOtpToken('');
+      setAuthLoading(false);
+    } catch (err: any) {
+      toast.error(err.message || 'Verification failed');
+      setErrorMsg(err.message || 'Invalid or expired verification code.');
+      setAuthLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const targetEmail = (forgotEmail || email).trim();
+    if (!targetEmail) {
+      toast.error('Please enter your registered email address.');
+      return;
+    }
+    setAuthLoading(true);
+    setErrorMsg(null);
+    try {
+      const res = await fetch('/api/v1/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: targetEmail }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error?.message || 'Failed to send reset link');
+      toast.success(data.message || 'Password reset link sent to your email.');
+      setSuccessMsg('If an account exists for ' + targetEmail + ', a reset link has been dispatched.');
+      setMode('signin');
+      setAuthLoading(false);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to request password reset.');
+      setErrorMsg(err.message || 'Failed to request password reset.');
       setAuthLoading(false);
     }
   };
@@ -275,44 +381,46 @@ export default function PortalAuthPage() {
           </Typography>
 
           {/* Quick Demo Switcher Prompt */}
-          <Box sx={{
-            mt: 4,
-            p: 2,
-            borderRadius: '12px',
-            bgcolor: 'rgba(0,0,0,0.25)',
-            border: '1px solid rgba(94,234,212,0.3)',
-            backdropFilter: 'blur(8px)',
-          }}>
-            <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
-              <Typography sx={{ fontSize: '0.8125rem', fontWeight: 700, color: '#5EEAD4' }}>
-                ⚡ Quick Dev Demo Access
-              </Typography>
-              <Chip label="1-Click Login" size="small" sx={{ height: 20, fontSize: '0.65rem', bgcolor: '#0F766E', color: '#fff', fontWeight: 700 }} />
-            </Stack>
-            <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
-              {demoUsers.slice(0, 4).map((u) => (
-                <Button
-                  key={u.id}
-                  size="small"
-                  variant="outlined"
-                  onClick={() => handleDemoLogin(u.id)}
-                  disabled={authLoading}
-                  sx={{
-                    color: '#fff',
-                    borderColor: 'rgba(255,255,255,0.3)',
-                    fontSize: '0.75rem',
-                    textTransform: 'capitalize',
-                    py: 0.5,
-                    px: 1.2,
-                    borderRadius: '8px',
-                    '&:hover': { bgcolor: 'rgba(94,234,212,0.2)', borderColor: '#5EEAD4' },
-                  }}
-                >
-                  {u.role === 'admin' ? '👑 Admin' : u.role === 'dean' ? '🎓 Dean' : u.role === 'faculty' ? '👨‍⚕️ Faculty' : '🧑‍🎓 Student'}
-                </Button>
-              ))}
-            </Stack>
-          </Box>
+          {demoUsers.length > 0 && (
+            <Box sx={{
+              mt: 4,
+              p: 2,
+              borderRadius: '12px',
+              bgcolor: 'rgba(0,0,0,0.25)',
+              border: '1px solid rgba(94,234,212,0.3)',
+              backdropFilter: 'blur(8px)',
+            }}>
+              <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+                <Typography sx={{ fontSize: '0.8125rem', fontWeight: 700, color: '#5EEAD4' }}>
+                  ⚡ Quick Dev Demo Access
+                </Typography>
+                <Chip label="1-Click Login" size="small" sx={{ height: 20, fontSize: '0.65rem', bgcolor: '#0F766E', color: '#fff', fontWeight: 700 }} />
+              </Stack>
+              <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
+                {demoUsers.slice(0, 4).map((u) => (
+                  <Button
+                    key={u.id}
+                    size="small"
+                    variant="outlined"
+                    onClick={() => handleDemoLogin(u.id)}
+                    disabled={authLoading}
+                    sx={{
+                      color: '#fff',
+                      borderColor: 'rgba(255,255,255,0.3)',
+                      fontSize: '0.75rem',
+                      textTransform: 'capitalize',
+                      py: 0.5,
+                      px: 1.2,
+                      borderRadius: '8px',
+                      '&:hover': { bgcolor: 'rgba(94,234,212,0.2)', borderColor: '#5EEAD4' },
+                    }}
+                  >
+                    {u.role === 'admin' ? '👑 Admin' : u.role === 'dean' ? '🎓 Dean' : u.role === 'faculty' ? '👨‍⚕️ Faculty' : '🧑‍🎓 Student'}
+                  </Button>
+                ))}
+              </Stack>
+            </Box>
+          )}
         </Box>
 
         {/* Stats Footer Badge */}
@@ -549,7 +657,7 @@ export default function PortalAuthPage() {
                       label={<Typography sx={{ fontSize: '0.8125rem', color: '#64748B' }}>Remember me</Typography>}
                     />
                     <Typography
-                      onClick={() => setErrorMsg('Password reset link is sent to verified email.')}
+                      onClick={() => { setErrorMsg(null); setSuccessMsg(null); setMode('forgot'); }}
                       sx={{ fontSize: '0.8125rem', color: '#0F766E', fontWeight: 600, cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
                     >
                       Forgot password?
@@ -640,42 +748,44 @@ export default function PortalAuthPage() {
               </Stack>
 
               {/* Dev Fast Login */}
-              <Box sx={{ mt: 2, pt: 2, borderTop: '1px dashed #CBD5E1' }}>
-                <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', mb: 1.5, textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  Or Fast Demo Sign In (Dev)
-                </Typography>
-                <Grid container spacing={1}>
-                  {demoUsers.slice(0, 4).map((user) => (
-                    <Grid size={6} key={user.id}>
-                      <Paper
-                        onClick={() => handleDemoLogin(user.id)}
-                        elevation={0}
-                        sx={{
-                          p: 1.2,
-                          borderRadius: '8px',
-                          border: '1px solid #E2E8F0',
-                          cursor: 'pointer',
-                          bgcolor: '#FFFFFF',
-                          transition: 'all 0.2s',
-                          '&:hover': {
-                            borderColor: '#0F766E',
-                            bgcolor: '#F0FDFA',
-                            transform: 'translateY(-1px)',
-                            boxShadow: '0 2px 6px rgba(15,118,110,0.12)',
-                          },
-                        }}
-                      >
-                        <Typography sx={{ fontSize: '0.8125rem', fontWeight: 700, color: '#1E293B', lineHeight: 1.2 }}>
-                          {user.name}
-                        </Typography>
-                        <Typography sx={{ fontSize: '0.7rem', color: '#0F766E', fontWeight: 600, textTransform: 'capitalize' }}>
-                          Role: {user.role}
-                        </Typography>
-                      </Paper>
-                    </Grid>
-                  ))}
-                </Grid>
-              </Box>
+              {demoUsers.length > 0 && (
+                <Box sx={{ mt: 2, pt: 2, borderTop: '1px dashed #CBD5E1' }}>
+                  <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', mb: 1.5, textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Or Fast Demo Sign In (Dev)
+                  </Typography>
+                  <Grid container spacing={1}>
+                    {demoUsers.slice(0, 4).map((user) => (
+                      <Grid size={6} key={user.id}>
+                        <Paper
+                          onClick={() => handleDemoLogin(user.id)}
+                          elevation={0}
+                          sx={{
+                            p: 1.2,
+                            borderRadius: '8px',
+                            border: '1px solid #E2E8F0',
+                            cursor: 'pointer',
+                            bgcolor: '#FFFFFF',
+                            transition: 'all 0.2s',
+                            '&:hover': {
+                              borderColor: '#0F766E',
+                              bgcolor: '#F0FDFA',
+                              transform: 'translateY(-1px)',
+                              boxShadow: '0 2px 6px rgba(15,118,110,0.12)',
+                            },
+                          }}
+                        >
+                          <Typography sx={{ fontSize: '0.8125rem', fontWeight: 700, color: '#1E293B', lineHeight: 1.2 }}>
+                            {user.name}
+                          </Typography>
+                          <Typography sx={{ fontSize: '0.7rem', color: '#0F766E', fontWeight: 600, textTransform: 'capitalize' }}>
+                            Role: {user.role}
+                          </Typography>
+                        </Paper>
+                      </Grid>
+                    ))}
+                  </Grid>
+                </Box>
+              )}
 
               <Stack direction="row" sx={{ justifyContent: 'center', mt: 3 }} spacing={1}>
                 <Typography sx={{ fontSize: '0.875rem', color: '#64748B' }}>
@@ -964,6 +1074,155 @@ export default function PortalAuthPage() {
                   sx={{ fontSize: '0.875rem', color: '#0F766E', fontWeight: 700, cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
                 >
                   Sign In
+                </Typography>
+              </Stack>
+            </Box>
+          )}
+
+          {/* OTP VERIFICATION VIEW */}
+          {mode === 'verify' && (
+            <Box>
+              <Typography sx={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: '1.75rem', color: '#0F172A', mb: 0.5 }}>
+                Verify Your Email
+              </Typography>
+              <Typography sx={{ color: '#64748B', fontSize: '0.875rem', mb: 3 }}>
+                Enter the 6-digit verification code sent to <strong>{signUpEmail || email || 'your email'}</strong>
+              </Typography>
+
+              <form onSubmit={handleVerifyOtp}>
+                <Stack spacing={2.5}>
+                  <Box>
+                    <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', mb: 0.6 }}>
+                      6-Digit OTP Code
+                    </Typography>
+                    <TextField
+                      fullWidth
+                      placeholder="e.g. 123456"
+                      value={otpToken}
+                      onChange={(e) => setOtpToken(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
+                      required
+                      autoFocus
+                      slotProps={{ htmlInput: { style: { textAlign: 'center', letterSpacing: '0.4em', fontSize: '1.3rem', fontWeight: 700 } } }}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          height: 52,
+                          borderRadius: '10px',
+                          bgcolor: '#FFFFFF',
+                        },
+                      }}
+                    />
+                  </Box>
+
+                  <Button
+                    type="submit"
+                    fullWidth
+                    variant="contained"
+                    disabled={authLoading || otpToken.length < 6}
+                    endIcon={authLoading ? <CircularProgress size={18} color="inherit" /> : <ArrowForwardIcon />}
+                    sx={{
+                      bgcolor: '#0F766E',
+                      height: 46,
+                      borderRadius: '10px',
+                      fontWeight: 700,
+                      fontSize: '0.9375rem',
+                      textTransform: 'none',
+                      boxShadow: '0 4px 12px rgba(15,118,110,0.25)',
+                      '&:hover': { bgcolor: '#0D6861' },
+                    }}
+                  >
+                    {authLoading ? 'Verifying...' : 'Verify Email & Activate'}
+                  </Button>
+                </Stack>
+              </form>
+
+              <Stack direction="row" sx={{ justifyContent: 'center', mt: 3 }} spacing={1}>
+                <Typography sx={{ fontSize: '0.875rem', color: '#64748B' }}>
+                  Entered wrong email or already verified?
+                </Typography>
+                <Typography
+                  onClick={() => { setErrorMsg(null); setSuccessMsg(null); setMode('signin'); }}
+                  sx={{ fontSize: '0.875rem', color: '#0F766E', fontWeight: 700, cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
+                >
+                  Back to Sign In
+                </Typography>
+              </Stack>
+            </Box>
+          )}
+
+          {/* FORGOT PASSWORD VIEW */}
+          {mode === 'forgot' && (
+            <Box>
+              <Typography sx={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: '1.75rem', color: '#0F172A', mb: 0.5 }}>
+                Reset Password
+              </Typography>
+              <Typography sx={{ color: '#64748B', fontSize: '0.875rem', mb: 3 }}>
+                Enter your registered email and we will send you a secure password reset link.
+              </Typography>
+
+              <form onSubmit={handleForgotPassword}>
+                <Stack spacing={2.5}>
+                  <Box>
+                    <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155', mb: 0.6 }}>
+                      Institutional / Official Email
+                    </Typography>
+                    <TextField
+                      fullWidth
+                      type="email"
+                      placeholder="doctor@medora.edu"
+                      value={forgotEmail || email}
+                      onChange={(e) => setForgotEmail(e.target.value)}
+                      required
+                      autoFocus
+                      slotProps={{
+                        input: {
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <EmailOutlinedIcon sx={{ color: '#94A3B8', fontSize: 20 }} />
+                            </InputAdornment>
+                          ),
+                        },
+                      }}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          height: 46,
+                          borderRadius: '10px',
+                          bgcolor: '#FFFFFF',
+                        },
+                      }}
+                    />
+                  </Box>
+
+                  <Button
+                    type="submit"
+                    fullWidth
+                    variant="contained"
+                    disabled={authLoading}
+                    endIcon={authLoading ? <CircularProgress size={18} color="inherit" /> : <ArrowForwardIcon />}
+                    sx={{
+                      bgcolor: '#0F766E',
+                      height: 46,
+                      borderRadius: '10px',
+                      fontWeight: 700,
+                      fontSize: '0.9375rem',
+                      textTransform: 'none',
+                      boxShadow: '0 4px 12px rgba(15,118,110,0.25)',
+                      '&:hover': { bgcolor: '#0D6861' },
+                    }}
+                  >
+                    {authLoading ? 'Sending Reset Link...' : 'Send Password Reset Link'}
+                  </Button>
+                </Stack>
+              </form>
+
+              <Stack direction="row" sx={{ justifyContent: 'center', mt: 3 }} spacing={1}>
+                <Typography sx={{ fontSize: '0.875rem', color: '#64748B' }}>
+                  Remembered your password?
+                </Typography>
+                <Typography
+                  onClick={() => { setErrorMsg(null); setSuccessMsg(null); setMode('signin'); }}
+                  sx={{ fontSize: '0.875rem', color: '#0F766E', fontWeight: 700, cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
+                >
+                  Back to Sign In
                 </Typography>
               </Stack>
             </Box>

@@ -25,6 +25,8 @@ import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Alert from '@mui/material/Alert';
+import toast from 'react-hot-toast';
+import { StatusBadge } from '../../../../StatusBadge';
 
 // Icons
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -308,17 +310,7 @@ export default function PatientProfilePage() {
                 <Typography sx={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: { xs: '1.35rem', sm: '1.6rem' }, color: '#0F172A' }}>
                   {patient.name}
                 </Typography>
-                <Chip
-                  label={patient.status}
-                  size="small"
-                  sx={{
-                    bgcolor: patient.status.includes('Admitted') ? '#FEF2F2' : '#F0FDF4',
-                    color: patient.status.includes('Admitted') ? '#DC2626' : '#16A34A',
-                    fontWeight: 700,
-                    fontSize: '0.75rem',
-                    borderRadius: '6px',
-                  }}
-                />
+                <StatusBadge status={patient.status} />
               </Stack>
               <Stack direction="row" spacing={2} sx={{ flexWrap: 'wrap', gap: 1, color: '#64748B', fontSize: '0.85rem' }}>
                 <Box component="span"><strong>UHID:</strong> {patient.id}</Box>
@@ -355,7 +347,7 @@ export default function PatientProfilePage() {
             <Button
               variant="contained"
               startIcon={<AddCircleOutlineIcon />}
-              onClick={() => alert(`Adding prescription for ${patient.name}...`)}
+              onClick={() => toast.success(`Opening prescription module for ${patient.name}...`)}
               sx={{
                 textTransform: 'none',
                 fontWeight: 700,
@@ -533,7 +525,7 @@ export default function PatientProfilePage() {
                 variant="contained"
                 size="small"
                 startIcon={<AddCircleOutlineIcon />}
-                onClick={() => alert('Opening prescription dialog...')}
+                onClick={() => toast.success('Opening medication prescription dialog...')}
                 sx={{ bgcolor: '#0F766E', textTransform: 'none', borderRadius: '8px', fontWeight: 700 }}
               >
                 Add Medication
@@ -563,18 +555,7 @@ export default function PatientProfilePage() {
                       <TableCell sx={{ fontSize: '0.8125rem', color: '#334155' }}>{row.duration}</TableCell>
                       <TableCell sx={{ fontSize: '0.8125rem', color: '#64748B' }}>{row.prescribedBy}</TableCell>
                       <TableCell>
-                        <Chip
-                          label={row.status}
-                          size="small"
-                          sx={{
-                            bgcolor: row.status === 'Active' ? '#D1FAE5' : '#F1F5F9',
-                            color: row.status === 'Active' ? '#065F46' : '#64748B',
-                            fontWeight: 700,
-                            fontSize: '0.72rem',
-                            height: 22,
-                            borderRadius: '4px',
-                          }}
-                        />
+                        <StatusBadge status={row.status} />
                       </TableCell>
                     </TableRow>
                   ))}
@@ -595,7 +576,7 @@ export default function PatientProfilePage() {
                 variant="outlined"
                 size="small"
                 startIcon={<ScienceIcon />}
-                onClick={() => alert('Order new diagnostic test...')}
+                onClick={() => toast.success('Opening diagnostic test order requisition...')}
                 sx={{ borderColor: '#CBD5E1', color: '#334155', textTransform: 'none', borderRadius: '8px', fontWeight: 600 }}
               >
                 Order Lab Test
@@ -625,24 +606,13 @@ export default function PatientProfilePage() {
                       <TableCell sx={{ fontSize: '0.8125rem', color: '#334155' }}>{row.date}</TableCell>
                       <TableCell sx={{ fontSize: '0.8125rem', color: '#334155' }}>{row.result}</TableCell>
                       <TableCell>
-                        <Chip
-                          label={row.status}
-                          size="small"
-                          sx={{
-                            bgcolor: row.status === 'Normal' ? '#D1FAE5' : row.status === 'Borderline High' ? '#FEF3C7' : '#E0F2FE',
-                            color: row.status === 'Normal' ? '#065F46' : row.status === 'Borderline High' ? '#B45309' : '#0369A1',
-                            fontWeight: 700,
-                            fontSize: '0.72rem',
-                            height: 22,
-                            borderRadius: '4px',
-                          }}
-                        />
+                        <StatusBadge status={row.status} />
                       </TableCell>
                       <TableCell sx={{ textAlign: 'right' }}>
                         <Button
                           size="small"
                           startIcon={<DownloadIcon sx={{ fontSize: 16 }} />}
-                          onClick={() => alert(`Downloading report ${row.reportId}...`)}
+                          onClick={() => toast.success(`Downloading report ${row.reportId}...`)}
                           sx={{ textTransform: 'none', fontSize: '0.75rem', py: 0.25, color: '#0F766E' }}
                         >
                           PDF
@@ -667,7 +637,7 @@ export default function PatientProfilePage() {
                 variant="contained"
                 size="small"
                 startIcon={<AddCircleOutlineIcon />}
-                onClick={() => alert('Add progress note dialog...')}
+                onClick={() => toast.success('Opening clinical progress note editor...')}
                 sx={{ bgcolor: '#0F766E', textTransform: 'none', borderRadius: '8px', fontWeight: 700 }}
               >
                 + New Progress Note
@@ -748,7 +718,7 @@ export default function PatientProfilePage() {
                 variant="contained"
                 size="small"
                 startIcon={<ReceiptLongIcon />}
-                onClick={() => alert('Generating Interim Bill PDF...')}
+                onClick={() => toast.success('Generating Interim Bill PDF summary...')}
                 sx={{ bgcolor: '#0F766E', textTransform: 'none', borderRadius: '8px', fontWeight: 700 }}
               >
                 Generate Interim Invoice

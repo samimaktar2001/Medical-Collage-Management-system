@@ -2068,12 +2068,14 @@
           "content_base64": {
             "type": "string",
             "maxLength": 7000000
+          },
+          "s3_key": {
+            "type": "string"
           }
         },
         "required": [
           "name",
-          "mime",
-          "content_base64"
+          "mime"
         ],
         "additionalProperties": false
       },

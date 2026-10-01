@@ -18,6 +18,7 @@ import ScienceIcon from '@mui/icons-material/Science';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import toast from 'react-hot-toast';
 
 export default function ResearchPage() {
   const ongoingProjects = [
@@ -127,7 +128,7 @@ export default function ResearchPage() {
                 All biomedical, clinical trial, and epidemiological studies involving human participants are governed under ICMR National Ethical Guidelines:
               </Typography>
             </Box>
-            <Button variant="contained" onClick={() => alert('Opening Ethics Protocol Submission Guidelines...')} sx={{ bgcolor: '#0F766E', fontWeight: 700, textTransform: 'none', borderRadius: '8px' }}>
+            <Button variant="contained" onClick={() => toast.success('Opening Ethics Protocol Submission Guidelines...')} sx={{ bgcolor: '#0F766E', fontWeight: 700, textTransform: 'none', borderRadius: '8px' }}>
               Submit Research Protocol
             </Button>
           </Stack>
@@ -145,7 +146,7 @@ export default function ResearchPage() {
                     <MenuBookIcon sx={{ color: '#0F766E', fontSize: 20 }} />
                     <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#1E293B' }}>{f.name}</Typography>
                   </Stack>
-                  <Button size="small" startIcon={<FileDownloadIcon sx={{ fontSize: 16 }} />} onClick={() => alert(`Downloading ${f.name}`)} sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#0F766E' }}>
+                  <Button size="small" startIcon={<FileDownloadIcon sx={{ fontSize: 16 }} />} onClick={() => toast.success(`Downloading ${f.name}`)} sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#0F766E' }}>
                     PDF
                   </Button>
                 </Box>

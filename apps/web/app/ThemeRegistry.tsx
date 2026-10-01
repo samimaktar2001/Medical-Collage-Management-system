@@ -6,6 +6,7 @@ import { AppRouterCacheProvider } from '@mui/material-nextjs/v15-appRouter';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import theme from './theme';
+import { ConfirmProvider } from './ConfirmDialog';
 
 export default function ThemeRegistry({ children }: { children: React.ReactNode }) {
   return (
@@ -13,7 +14,9 @@ export default function ThemeRegistry({ children }: { children: React.ReactNode 
       <ThemeProvider theme={theme}>
         <LocalizationProvider dateAdapter={AdapterDayjs}>
           <CssBaseline />
-          {children}
+          <ConfirmProvider>
+            {children}
+          </ConfirmProvider>
         </LocalizationProvider>
       </ThemeProvider>
     </AppRouterCacheProvider>

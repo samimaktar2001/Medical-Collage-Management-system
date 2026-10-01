@@ -4,9 +4,9 @@
       <stop offset="0%" stop-color="#FCE7F3" />
       <stop offset="100%" stop-color="#E0E7FF" />
     </linearGradient>
-    <linearGradient id="coatGradFemale" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#FFFFFF" />
-      <stop offset="100%" stop-color="#F8FAFC" />
+    <linearGradient id="skinGradFemale" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFEDD5" />
+      <stop offset="100%" stop-color="#FED7AA" />
     </linearGradient>
   </defs>
 
@@ -14,25 +14,53 @@
   <circle cx="64" cy="64" r="64" fill="url(#bgGradFemale)" />
 
   <!-- Hair Back -->
-  <path d="M38 52 C38 28 90 28 90 52 C90 74 86 86 84 94 L44 94 C42 86 38 74 38 52 Z" fill="#64748B" />
-
-  <!-- Head / Face -->
-  <circle cx="64" cy="48" r="20" fill="#E2E8F0" />
-  
-  <!-- Hair Front Style -->
-  <path d="M42 42 C44 32 64 26 86 36 C86 48 84 54 84 54 C74 44 56 42 42 42 Z" fill="#475569" />
-
-  <!-- Neck -->
-  <path d="M58 66 L70 66 L72 78 L56 78 Z" fill="#CBD5E1" />
+  <path d="M36 50 C36 24 92 24 92 50 C92 78 88 92 84 100 L44 100 C40 92 36 78 36 50 Z" fill="#1E293B" />
 
   <!-- Shoulders / Lab Coat -->
-  <path d="M28 128 C28 94 42 82 64 82 C86 82 100 94 100 128 Z" fill="url(#coatGradFemale)" stroke="#CBD5E1" stroke-width="1.5" />
+  <path d="M22 128 C22 96 38 84 64 84 C90 84 106 96 106 128 Z" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="2" />
 
   <!-- Inner Scrub Top (Clinical Teal) -->
-  <polygon points="64,82 56,100 72,100" fill="#0F766E" />
+  <polygon points="64,84 50,108 78,108" fill="#0F766E" />
+  <polygon points="64,92 56,128 72,128" fill="#0D5E57" />
 
   <!-- Stethoscope -->
-  <path d="M50 82 C48 96 54 106 58 110 C62 114 62 118 62 122" fill="none" stroke="#007B80" stroke-width="3" stroke-linecap="round" />
-  <path d="M78 82 C80 96 74 106 70 110" fill="none" stroke="#007B80" stroke-width="3" stroke-linecap="round" />
-  <circle cx="62" cy="122" r="5" fill="#0F766E" stroke="#5EEAD4" stroke-width="2" />
+  <path d="M46 82 C44 98 50 110 56 114 C60 118 60 122 60 126" fill="none" stroke="#0F766E" stroke-width="3" stroke-linecap="round" />
+  <path d="M82 82 C84 98 78 110 72 114" fill="none" stroke="#0F766E" stroke-width="3" stroke-linecap="round" />
+  <circle cx="60" cy="126" r="4.5" fill="#0F766E" stroke="#5EEAD4" stroke-width="2" />
+
+  <!-- Neck -->
+  <path d="M54 66 L74 66 L76 86 L52 86 Z" fill="#FED7AA" />
+
+  <!-- Ears & Earrings -->
+  <circle cx="39" cy="50" r="6" fill="#FED7AA" />
+  <circle cx="89" cy="50" r="6" fill="#FED7AA" />
+  <circle cx="39" cy="54" r="1.5" fill="#F59E0B" />
+  <circle cx="89" cy="54" r="1.5" fill="#F59E0B" />
+
+  <!-- Face -->
+  <circle cx="64" cy="48" r="23" fill="url(#skinGradFemale)" />
+
+  <!-- Front Hair Style -->
+  <path d="M40 44 C42 30 62 22 88 34 C88 46 86 52 86 52 C74 40 56 38 40 44 Z" fill="#1E293B" />
+
+  <!-- Eyebrows -->
+  <path d="M49 41 Q54 38 59 40" stroke="#334155" stroke-width="2" stroke-linecap="round" fill="none" />
+  <path d="M69 40 Q74 38 79 41" stroke="#334155" stroke-width="2" stroke-linecap="round" fill="none" />
+
+  <!-- Eyes -->
+  <ellipse cx="54" cy="47" rx="2.5" ry="3.5" fill="#0F172A" />
+  <ellipse cx="74" cy="47" rx="2.5" ry="3.5" fill="#0F172A" />
+  <!-- Eye highlights -->
+  <circle cx="53" cy="46" r="1" fill="#FFFFFF" />
+  <circle cx="73" cy="46" r="1" fill="#FFFFFF" />
+
+  <!-- Eyelashes -->
+  <path d="M51 45 L49 43" stroke="#0F172A" stroke-width="1.5" stroke-linecap="round" />
+  <path d="M77 45 L79 43" stroke="#0F172A" stroke-width="1.5" stroke-linecap="round" />
+
+  <!-- Nose -->
+  <path d="M64 49 L62 55 L65 55" stroke="#F97316" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+
+  <!-- Friendly Smile (Lips) -->
+  <path d="M56 60 Q64 67 72 60" stroke="#BE123C" stroke-width="2" stroke-linecap="round" fill="none" />
 </svg>

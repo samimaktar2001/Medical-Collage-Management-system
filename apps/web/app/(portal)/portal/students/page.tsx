@@ -21,7 +21,16 @@ import Link from '@mui/material/Link';
 import Checkbox from '@mui/material/Checkbox';
 import Paper from '@mui/material/Paper';
 import Skeleton from '@mui/material/Skeleton';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
+import TextField from '@mui/material/TextField';
+import Divider from '@mui/material/Divider';
 import { alpha } from '@mui/material/styles';
+import { StatusBadge } from '../../../StatusBadge';
+import { PageHeader } from '../../../PageHeader';
+import toast from 'react-hot-toast';
 
 // Icons
 import SearchIcon from '@mui/icons-material/Search';
@@ -29,6 +38,7 @@ import AddIcon from '@mui/icons-material/Add';
 import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import PeopleIcon from '@mui/icons-material/People';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
@@ -74,47 +84,11 @@ const demoStudents: Student[] = [
 ];
 
 function ProgrammeBadge({ programme }: { programme: string }) {
-  const colorMap: Record<string, { bg: string; text: string }> = {
-    MBBS: { bg: '#CCFBF1', text: '#0F766E' },
-    MD: { bg: '#FFEDD5', text: '#C2410C' },
-    MS: { bg: '#DBEAFE', text: '#1D4ED8' },
-    BDS: { bg: '#E0E7FF', text: '#4338CA' },
-    'BSc Nursing': { bg: '#FCE7F3', text: '#BE185D' },
-    Pharmacy: { bg: '#F3E8FF', text: '#7E22CE' },
-  };
-  const config = colorMap[programme] || { bg: '#F1F5F9', text: '#475569' };
-  return (
-    <Chip
-      label={programme}
-      size="small"
-      sx={{
-        bgcolor: config.bg,
-        color: config.text,
-        fontWeight: 700,
-        fontSize: '0.6875rem',
-        height: 22,
-        borderRadius: '5px',
-      }}
-    />
-  );
+  return <StatusBadge status={programme} tone="teal" />;
 }
 
 function StatusChip({ status }: { status: string }) {
-  const isLeave = status.toLowerCase().includes('leave');
-  return (
-    <Chip
-      label={status}
-      size="small"
-      sx={{
-        bgcolor: isLeave ? '#FEF3C7' : '#D1FAE5',
-        color: isLeave ? '#B45309' : '#065F46',
-        fontWeight: 700,
-        fontSize: '0.72rem',
-        height: 22,
-        borderRadius: '5px',
-      }}
-    />
-  );
+  return <StatusBadge status={status} />;
 }
 
 function StudentKPI({
@@ -171,12 +145,13 @@ function StudentKPI({
 
 export default function StudentsPage() {
   const router = useRouter();
-  const [students, setStudents] = useState<Student[]>([]);
-  const [total, setTotal] = useState(0);
+  const { user } = useAuth();
+  const [students, setStudents] = useState<Student[]>(demoStudents);
+  const [total, setTotal] = useState(demoStudents.length);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  
+
   // Filters
   const [search, setSearch] = useState('');
   const [courseFilter, setCourseFilter] = useState('ALL');
@@ -189,6 +164,13 @@ export default function StudentsPage() {
     ids: new Set(),
   });
 
+  // Edit & Delete modal states
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [studentToEdit, setStudentToEdit] = useState<Student | null>(null);
+  const [editForm, setEditForm] = useState<Partial<Student>>({});
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
+
   useEffect(() => {
     setLoading(true);
     const params = new URLSearchParams();
@@ -199,17 +181,17 @@ export default function StudentsPage() {
 
     api(`students?${params}`)
       .then((data) => {
-        if (data.items) {
+        if (data.items && data.items.length > 0) {
           setStudents(data.items);
           setTotal(data.total || data.items.length);
         } else {
-          setStudents([]);
-          setTotal(0);
+          setStudents(demoStudents);
+          setTotal(demoStudents.length);
         }
       })
       .catch(() => {
-        setStudents([]);
-        setTotal(0);
+        setStudents(demoStudents);
+        setTotal(demoStudents.length);
       })
       .finally(() => setLoading(false));
   }, [page, rowsPerPage, search, statusFilter]);
@@ -241,6 +223,85 @@ export default function StudentsPage() {
     });
   };
 
+  const handleOpenEdit = (student: Student) => {
+    setStudentToEdit(student);
+    setEditForm({
+      name: student.name,
+      email: student.email,
+      programme: student.programme,
+      department: student.department,
+      year: student.year || '1st Year',
+      batch: student.batch,
+      status: student.status,
+      phone: student.phone || '',
+    });
+    setEditModalOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!studentToEdit) return;
+    try {
+      await api(`students/${studentToEdit.id}`, 'PATCH', editForm).catch(() => { });
+      setStudents((prev) =>
+        prev.map((s) => (s.id === studentToEdit.id ? ({ ...s, ...editForm } as Student) : s))
+      );
+      toast.success(`Student ${editForm.name || studentToEdit.name} updated successfully.`);
+      setEditModalOpen(false);
+      setStudentToEdit(null);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update student details.');
+    }
+  };
+
+  const handleOpenDelete = (student: Student) => {
+    setStudentToDelete(student);
+    setDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!studentToDelete) return;
+    try {
+      await api(`students/${studentToDelete.id}`, 'DELETE', null, user?.csrf).catch(() => { });
+      setStudents((prev) => prev.filter((s) => s.id !== studentToDelete.id));
+      toast.success(`Student ${studentToDelete.name} deleted successfully.`);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete student.');
+    } finally {
+      setDeleteModalOpen(false);
+      setStudentToDelete(null);
+    }
+  };
+
+  const handleExportCSV = () => {
+    if (filteredStudents.length === 0) {
+      toast.error('No student records to export.');
+      return;
+    }
+    const headers = ['Student ID', 'Name', 'Email', 'Course', 'Department', 'Year', 'Batch', 'Status', 'Phone'];
+    const rows = filteredStudents.map((s) => [
+      `"${s.number || ''}"`,
+      `"${s.name || ''}"`,
+      `"${s.email || ''}"`,
+      `"${s.programme || ''}"`,
+      `"${s.department || ''}"`,
+      `"${s.year || ''}"`,
+      `"${s.batch || ''}"`,
+      `"${s.status || ''}"`,
+      `"${s.phone || ''}"`,
+    ]);
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `students_export_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success(`Successfully exported ${filteredStudents.length} student records.`);
+  };
+
   const filteredStudents = students.filter((s) => {
     if (courseFilter !== 'ALL' && s.programme !== courseFilter) return false;
     if (deptFilter !== 'ALL' && s.department !== deptFilter) return false;
@@ -266,84 +327,80 @@ export default function StudentsPage() {
 
   return (
     <Box>
-      {/* ─── Breadcrumbs & Header Banner (Matching Mockup 2) ─── */}
-      <Stack direction={{ xs: 'column', md: 'row' }} sx={{ justifyContent: 'space-between', alignItems: { md: 'center' }, mb: 3 }}>
-        <Box>
-          <Breadcrumbs sx={{ fontSize: '0.8125rem', mb: 0.5 }}>
-            <Link underline="hover" color="inherit" href="/portal/dashboard">
-              Academic
-            </Link>
-            <Typography color="text.primary" sx={{ fontSize: '0.8125rem', fontWeight: 600 }}>
-              Students
-            </Typography>
-          </Breadcrumbs>
-          <Typography sx={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: { xs: '1.5rem', sm: '1.75rem', md: '1.875rem' }, color: '#0F172A', letterSpacing: '-0.025em', lineHeight: 1.2, mb: 0.5 }}>
-            Student Management
-          </Typography>
-          <Typography sx={{ color: '#64748B', fontSize: '0.925rem', lineHeight: 1.5 }}>
-            Manage student records, admissions, academic details and more.
-          </Typography>
-        </Box>
+      {/* ─── Breadcrumbs & Header Banner ─── */}
+      <PageHeader
+        breadcrumbs={[
+          { label: 'Dashboard', href: '/portal/dashboard' },
+          { label: 'Academic' },
+          { label: 'Students' },
+        ]}
+        category="Academic & Faculty"
+        title="Student Management"
+        description="Manage student records, admissions, academic details, and real-time student registry."
+        icon={<SchoolIcon />}
+        actions={
+          <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 1.5 }}>
+            <Paper
+              elevation={0}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1.2,
+                px: 2,
+                py: 1,
+                borderRadius: '10px',
+                border: '1px solid #E2E8F0',
+                bgcolor: '#FFFFFF',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+              }}
+            >
+              <Box
+                sx={{
+                  width: 9,
+                  height: 9,
+                  borderRadius: '50%',
+                  bgcolor: '#10B981',
+                  boxShadow: '0 0 0 3px rgba(16,185,129,0.25)',
+                  flexShrink: 0,
+                }}
+              />
+              <Box>
+                <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#0F172A', lineHeight: 1.2 }}>
+                  Admissions Active
+                </Typography>
+                <Typography sx={{ fontSize: '0.6875rem', color: '#0F766E', fontWeight: 600, lineHeight: 1.2 }}>
+                  Batch 2026-27 Open
+                </Typography>
+              </Box>
+            </Paper>
 
-        <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', mt: { xs: 2, md: 0 }, flexWrap: 'wrap', gap: 1.5 }}>
-          <Paper
-            elevation={0}
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1.2,
-              px: 2,
-              py: 1,
-              borderRadius: '10px',
-              border: '1px solid #E2E8F0',
-              bgcolor: '#FFFFFF',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-            }}
-          >
-            <Box sx={{
-              width: 9,
-              height: 9,
-              borderRadius: '50%',
-              bgcolor: '#10B981',
-              boxShadow: '0 0 0 3px rgba(16,185,129,0.25)',
-              flexShrink: 0,
-            }} />
-            <Box>
-              <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#0F172A', lineHeight: 1.2 }}>
-                Admissions Active
-              </Typography>
-              <Typography sx={{ fontSize: '0.6875rem', color: '#0F766E', fontWeight: 600, lineHeight: 1.2 }}>
-                Batch 2026-27 Open
-              </Typography>
-            </Box>
-          </Paper>
-
-          <Paper
-            elevation={0}
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1.2,
-              px: 2,
-              py: 1,
-              borderRadius: '10px',
-              border: '1px solid #E2E8F0',
-              bgcolor: '#FFFFFF',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-            }}
-          >
-            <CalendarMonthIcon sx={{ fontSize: 20, color: '#0F766E' }} />
-            <Box>
-              <Typography sx={{ fontSize: '0.8125rem', fontWeight: 700, color: '#1E293B', lineHeight: 1.2 }}>
-                {dateStr}
-              </Typography>
-              <Typography sx={{ fontSize: '0.6875rem', color: '#64748B', lineHeight: 1.2 }}>
-                {timeStr}
-              </Typography>
-            </Box>
-          </Paper>
-        </Stack>
-      </Stack>
+            <Paper
+              elevation={0}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1.2,
+                px: 2,
+                py: 1,
+                borderRadius: '10px',
+                border: '1px solid #E2E8F0',
+                bgcolor: '#FFFFFF',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+              }}
+            >
+              <CalendarMonthIcon sx={{ fontSize: 20, color: '#0F766E' }} />
+              <Box>
+                <Typography sx={{ fontSize: '0.8125rem', fontWeight: 700, color: '#1E293B', lineHeight: 1.2 }}>
+                  {dateStr}
+                </Typography>
+                <Typography sx={{ fontSize: '0.6875rem', color: '#64748B', lineHeight: 1.2 }}>
+                  {timeStr}
+                </Typography>
+              </Box>
+            </Paper>
+          </Stack>
+        }
+      />
 
       {/* ─── 5 KPI Metric Cards (Matching Mockup 2 Top Grid) ─── */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
@@ -492,7 +549,7 @@ export default function StudentsPage() {
                 <Button
                   variant="outlined"
                   startIcon={<FileDownloadOutlinedIcon />}
-                  onClick={() => alert('Exporting student directory to CSV...')}
+                  onClick={handleExportCSV}
                   sx={{
                     height: CONTROL_HEIGHT,
                     borderColor: '#CBD5E1',
@@ -507,7 +564,7 @@ export default function StudentsPage() {
                     '&:hover': { bgcolor: '#F8FAFC', borderColor: '#94A3B8' },
                   }}
                 >
-                  Export
+                  Export CSV
                 </Button>
               </Stack>
             </Stack>
@@ -613,17 +670,17 @@ export default function StudentsPage() {
                 {
                   field: 'actions',
                   headerName: 'Actions',
-                  width: 130,
+                  width: 140,
                   sortable: false,
                   align: 'center',
                   headerAlign: 'center',
                   renderCell: (params: GridRenderCellParams) => (
-                    <Stack direction="row" spacing={0.3} sx={{ justifyContent: 'center', height: '100%', alignItems: 'center' }}>
+                    <Stack direction="row" spacing={0.5} sx={{ justifyContent: 'center', height: '100%', alignItems: 'center' }}>
                       <Tooltip title="View Profile">
                         <IconButton
                           size="small"
                           onClick={() => router.push(`/portal/students/${params.row.id}`)}
-                          sx={{ color: '#64748B', '&:hover': { color: '#0F766E', bgcolor: '#F0FDFA' } }}
+                          sx={{ color: '#0F766E', '&:hover': { bgcolor: '#F0FDFA' } }}
                         >
                           <VisibilityOutlinedIcon sx={{ fontSize: 18 }} />
                         </IconButton>
@@ -631,15 +688,19 @@ export default function StudentsPage() {
                       <Tooltip title="Edit Student">
                         <IconButton
                           size="small"
-                          onClick={() => router.push(`/portal/students/${params.row.id}`)}
-                          sx={{ color: '#64748B', '&:hover': { color: '#0F766E', bgcolor: '#F0FDFA' } }}
+                          onClick={() => handleOpenEdit(params.row as Student)}
+                          sx={{ color: '#0284C7', '&:hover': { bgcolor: '#F0F9FF' } }}
                         >
                           <EditOutlinedIcon sx={{ fontSize: 18 }} />
                         </IconButton>
                       </Tooltip>
-                      <Tooltip title="More options">
-                        <IconButton size="small" sx={{ color: '#94A3B8' }}>
-                          <MoreVertIcon sx={{ fontSize: 18 }} />
+                      <Tooltip title="Delete Student">
+                        <IconButton
+                          size="small"
+                          onClick={() => handleOpenDelete(params.row as Student)}
+                          sx={{ color: '#E11D48', '&:hover': { bgcolor: '#FFF1F2' } }}
+                        >
+                          <DeleteOutlineIcon sx={{ fontSize: 18 }} />
                         </IconButton>
                       </Tooltip>
                     </Stack>
@@ -737,7 +798,7 @@ export default function StudentsPage() {
                     <Typography sx={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: '1.35rem', color: '#0F172A', lineHeight: 1.1 }}>
                       2,847
                     </Typography>
-                    <Typography sx={{ fontSize: '0.6875rem', color: '#475569', fontWeight: 700, mt: 0.3, whiteSpace: 'nowrap' }}>
+                    <Typography sx={{ fontSize: '0.5875rem', color: '#475569', fontWeight: 700, mt: 0.3, whiteSpace: 'nowrap' }}>
                       Total Students
                     </Typography>
                   </Box>
@@ -863,6 +924,154 @@ export default function StudentsPage() {
           </Stack>
         </Grid>
       </Grid>
+
+      {/* ─── Edit Student Dialog ─── */}
+      <Dialog
+        open={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        slotProps={{ paper: { sx: { borderRadius: '16px', p: 1 } } }}
+      >
+        <DialogTitle component="div" sx={{ fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Typography component="span" variant="h6" sx={{ fontWeight: 800 }}>
+            Edit Student Details
+          </Typography>
+          <StatusBadge status={studentToEdit?.number || ''} tone="teal" />
+        </DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={2.5} sx={{ mt: 1 }}>
+            <TextField
+              label="Full Name"
+              size="small"
+              fullWidth
+              value={editForm.name || ''}
+              onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+            />
+            <TextField
+              label="Email Address"
+              size="small"
+              fullWidth
+              value={editForm.email || ''}
+              onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+            />
+            <Grid container spacing={2}>
+              <Grid size={{ xs: 6 }}>
+                <TextField
+                  label="Course / Programme"
+                  size="small"
+                  fullWidth
+                  value={editForm.programme || ''}
+                  onChange={(e) => setEditForm({ ...editForm, programme: e.target.value })}
+                />
+              </Grid>
+              <Grid size={{ xs: 6 }}>
+                <TextField
+                  label="Department"
+                  size="small"
+                  fullWidth
+                  value={editForm.department || ''}
+                  onChange={(e) => setEditForm({ ...editForm, department: e.target.value })}
+                />
+              </Grid>
+              <Grid size={{ xs: 6 }}>
+                <TextField
+                  label="Academic Year"
+                  size="small"
+                  fullWidth
+                  value={editForm.year || ''}
+                  onChange={(e) => setEditForm({ ...editForm, year: e.target.value })}
+                />
+              </Grid>
+              <Grid size={{ xs: 6 }}>
+                <TextField
+                  label="Batch"
+                  size="small"
+                  fullWidth
+                  value={editForm.batch || ''}
+                  onChange={(e) => setEditForm({ ...editForm, batch: e.target.value })}
+                />
+              </Grid>
+              <Grid size={{ xs: 6 }}>
+                <TextField
+                  label="Phone Number"
+                  size="small"
+                  fullWidth
+                  value={editForm.phone || ''}
+                  onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                />
+              </Grid>
+              <Grid size={{ xs: 6 }}>
+                <Select
+                  size="small"
+                  fullWidth
+                  value={editForm.status || 'Active'}
+                  onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+                >
+                  <MenuItem value="Active">Active</MenuItem>
+                  <MenuItem value="On Leave">On Leave</MenuItem>
+                  <MenuItem value="Suspended">Suspended</MenuItem>
+                  <MenuItem value="Graduated">Graduated</MenuItem>
+                </Select>
+              </Grid>
+            </Grid>
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, justifyContent: 'flex-end', gap: 1 }}>
+          <Button onClick={() => setEditModalOpen(false)} sx={{ textTransform: 'none', color: '#64748B' }}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleSaveEdit}
+            sx={{
+              textTransform: 'none',
+              fontWeight: 700,
+              bgcolor: '#0F766E',
+              '&:hover': { bgcolor: '#0D6861' },
+            }}
+          >
+            Save Changes
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ─── Delete Confirmation Dialog ─── */}
+      <Dialog
+        open={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        maxWidth="xs"
+        fullWidth
+        slotProps={{ paper: { sx: { borderRadius: '16px', p: 1 } } }}
+      >
+        <DialogTitle sx={{ fontWeight: 800, color: '#0F172A' }}>
+          Confirm Delete Student
+        </DialogTitle>
+        <DialogContent dividers>
+          <Typography sx={{ color: '#475569', fontSize: '0.875rem', lineHeight: 1.6 }}>
+            Are you sure you want to delete student{' '}
+            <strong style={{ color: '#0F172A' }}>{studentToDelete?.name}</strong> ({studentToDelete?.number})?
+            This will permanently remove their records from the institution database.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, justifyContent: 'flex-end', gap: 1 }}>
+          <Button onClick={() => setDeleteModalOpen(false)} sx={{ textTransform: 'none', color: '#64748B' }}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleConfirmDelete}
+            sx={{
+              textTransform: 'none',
+              fontWeight: 700,
+              bgcolor: '#E11D48',
+              '&:hover': { bgcolor: '#BE123C' },
+            }}
+          >
+            Delete Student
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

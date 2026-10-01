@@ -1628,3 +1628,46 @@ th,
     width: 100%;
   }
 }
+
+/* ─── Global Dropdown, Menu & Select Popover Clarity Fix ─── */
+.MuiMenu-paper,
+.MuiPopover-paper,
+.MuiAutocomplete-paper {
+  background-color: #FFFFFF !important;
+  background: #FFFFFF !important;
+  border: 1px solid #CBD5E1 !important;
+  box-shadow: 0 12px 32px -4px rgba(15, 23, 42, 0.18), 0 4px 12px -2px rgba(15, 23, 42, 0.08) !important;
+  border-radius: 12px !important;
+  color: #1E293B !important;
+}
+
+.MuiMenu-paper .MuiList-root,
+.MuiPopover-paper .MuiList-root {
+  background-color: #FFFFFF !important;
+  background: #FFFFFF !important;
+  padding: 4px !important;
+}
+
+.MuiMenuItem-root {
+  color: #1E293B !important;
+  font-size: 0.8125rem !important;
+  border-radius: 6px !important;
+  margin: 2px 0 !important;
+  padding: 8px 12px !important;
+}
+
+.MuiMenuItem-root:hover {
+  background-color: #F1F5F9 !important;
+  color: #0F766E !important;
+}
+
+.MuiMenuItem-root.Mui-selected {
+  background-color: #F0FDFA !important;
+  color: #0F766E !important;
+  font-weight: 700 !important;
+}
+
+.MuiMenuItem-root.Mui-selected:hover {
+  background-color: #CCFBF1 !important;
+}
+

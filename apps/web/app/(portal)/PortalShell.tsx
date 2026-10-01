@@ -56,11 +56,14 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import SearchIcon from '@mui/icons-material/Search';
 import NotifyIcon from '@mui/icons-material/NotificationsNoneOutlined';
 import ChatIcon from '@mui/icons-material/ChatBubbleOutlined';
+import EmailIcon from '@mui/icons-material/Email';
 import MenuIcon from '@mui/icons-material/Menu';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import LogoutIcon from '@mui/icons-material/Logout';
 import PersonIcon from '@mui/icons-material/Person';
+import AccountCircleIcon from '@mui/icons-material/AccountCircle';
+import SecurityIcon from '@mui/icons-material/Security';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 import { SIDEBAR_WIDTH, SIDEBAR_COLLAPSED_WIDTH, TOPBAR_HEIGHT } from '../theme';
 
@@ -89,6 +92,19 @@ const AuthContext = createContext<AuthContextType>({
 
 export const useAuth = () => useContext(AuthContext);
 
+export class APIError extends Error {
+  status: number;
+  code?: string;
+  correlation_id?: string;
+  constructor(status: number, message: string, code?: string, correlation_id?: string) {
+    super(message);
+    this.name = 'APIError';
+    this.status = status;
+    this.code = code;
+    this.correlation_id = correlation_id;
+  }
+}
+
 /* ─── API Helper ─── */
 export async function api(
   path: string,
@@ -113,9 +129,29 @@ export async function api(
   try {
     data = JSON.parse(text);
   } catch {
-    throw new Error(r.ok ? 'Unexpected server response.' : `Server error (${r.status}).`);
+    const correlation_id = r.headers.get('x-correlation-id') || undefined;
+    throw new APIError(
+      r.status,
+      r.ok ? 'Unexpected server response.' : `Server error (${r.status}).`,
+      'INTERNAL_SERVER_ERROR',
+      correlation_id
+    );
   }
-  if (!r.ok) throw new Error(data.error?.message || 'Unable to complete request.');
+  if (!r.ok) {
+    const correlation_id = r.headers.get('x-correlation-id') || data?.error?.correlation_id;
+    const errorMsg = data?.error?.message || data?.message || `Request failed with status ${r.status}`;
+    const errorCode = data?.error?.code || 'API_ERROR';
+
+    // Global redirection for 401 Session Expiration in Portal
+    if (r.status === 401 && typeof window !== 'undefined') {
+      const currentPath = window.location.pathname;
+      if (currentPath.startsWith('/portal') && currentPath !== '/portal') {
+        window.location.href = `/error/401?from=${encodeURIComponent(currentPath)}`;
+      }
+    }
+
+    throw new APIError(r.status, errorMsg, errorCode, correlation_id);
+  }
   return data;
 }
 
@@ -129,74 +165,76 @@ const navSections: NavSection[] = [
   {
     label: '',
     items: [
-      { label: 'Dashboard', icon: <DashboardIcon sx={{ fontSize: 20 }} />, path: '/portal/dashboard' },
+      { label: 'Dashboard', icon: <DashboardIcon sx={{ fontSize: 20 }} />, path: '/portal/dashboard', roles: ['all'] },
     ],
   },
   {
     label: 'ROLE WORKSPACES',
     items: [
-      { label: 'Student Portal', icon: <SchoolIcon sx={{ fontSize: 20 }} />, path: '/portal/student' },
-      { label: 'Doctor Console', icon: <OpdIcon sx={{ fontSize: 20 }} />, path: '/portal/doctor' },
-      { label: 'CMS Website Studio', icon: <SettingsIcon sx={{ fontSize: 20 }} />, path: '/portal/cms' },
+      { label: 'Student Portal', icon: <SchoolIcon sx={{ fontSize: 20 }} />, path: '/portal/student', roles: ['student', 'admin', 'dean'] },
+      { label: 'Doctor Console', icon: <OpdIcon sx={{ fontSize: 20 }} />, path: '/portal/doctor', roles: ['faculty', 'doctor', 'admin', 'dean'] },
+      { label: 'CMS Website Studio', icon: <SettingsIcon sx={{ fontSize: 20 }} />, path: '/portal/cms', roles: ['editor', 'publisher', 'admin', 'dean'] },
     ],
   },
   {
     label: 'ACADEMIC',
     items: [
-      { label: 'Students', icon: <PeopleIcon sx={{ fontSize: 20 }} />, path: '/portal/students' },
-      { label: 'Faculty', icon: <SchoolIcon sx={{ fontSize: 20 }} />, path: '/portal/faculty' },
-      { label: 'Departments', icon: <BusinessIcon sx={{ fontSize: 20 }} />, path: '/portal/departments' },
-      { label: 'Courses', icon: <MenuBookIcon sx={{ fontSize: 20 }} />, path: '/portal/courses' },
-      { label: 'CRMI Intern Logbook', icon: <SchoolIcon sx={{ fontSize: 20 }} />, path: '/portal/internship' },
-      { label: 'Timetable', icon: <CalendarIcon sx={{ fontSize: 20 }} />, path: '/portal/timetable' },
-      { label: 'Examination', icon: <ExamIcon sx={{ fontSize: 20 }} />, path: '/portal/examination' },
-      { label: 'Results', icon: <ResultsIcon sx={{ fontSize: 20 }} />, path: '/portal/results' },
-      { label: 'Attendance', icon: <AttendanceIcon sx={{ fontSize: 20 }} />, path: '/portal/attendance' },
+      { label: 'Students', icon: <PeopleIcon sx={{ fontSize: 20 }} />, path: '/portal/students', roles: ['admin', 'dean', 'faculty', 'doctor', 'registrar', 'auditor'] },
+      { label: 'Faculty', icon: <SchoolIcon sx={{ fontSize: 20 }} />, path: '/portal/faculty', roles: ['admin', 'dean', 'faculty', 'doctor', 'registrar'] },
+      { label: 'Departments', icon: <BusinessIcon sx={{ fontSize: 20 }} />, path: '/portal/departments', roles: ['admin', 'dean', 'faculty', 'doctor', 'registrar'] },
+      { label: 'Courses', icon: <MenuBookIcon sx={{ fontSize: 20 }} />, path: '/portal/courses', roles: ['admin', 'dean', 'faculty', 'doctor', 'registrar', 'student'] },
+      { label: 'CRMI Intern Logbook', icon: <SchoolIcon sx={{ fontSize: 20 }} />, path: '/portal/internship', roles: ['student', 'faculty', 'doctor', 'dean', 'admin'] },
+      { label: 'Timetable', icon: <CalendarIcon sx={{ fontSize: 20 }} />, path: '/portal/timetable', roles: ['admin', 'dean', 'faculty', 'doctor', 'registrar', 'student'] },
+      { label: 'Examination', icon: <ExamIcon sx={{ fontSize: 20 }} />, path: '/portal/examination', roles: ['admin', 'dean', 'faculty', 'doctor', 'registrar', 'student'] },
+      { label: 'Results', icon: <ResultsIcon sx={{ fontSize: 20 }} />, path: '/portal/results', roles: ['admin', 'dean', 'faculty', 'doctor', 'student'] },
+      { label: 'Attendance', icon: <AttendanceIcon sx={{ fontSize: 20 }} />, path: '/portal/attendance', roles: ['admin', 'dean', 'faculty', 'doctor', 'student'] },
     ],
   },
   {
     label: 'HOSPITAL',
     items: [
-      { label: 'Hospital Dashboard', icon: <OpdIcon sx={{ fontSize: 20 }} />, path: '/portal/hospital' },
-      { label: 'OPD', icon: <OpdIcon sx={{ fontSize: 20 }} />, path: '/portal/opd' },
-      { label: 'IPD', icon: <IpdIcon sx={{ fontSize: 20 }} />, path: '/portal/ipd' },
-      { label: 'Emergency', icon: <EmergencyIcon sx={{ fontSize: 20 }} />, path: '/portal/emergency' },
-      { label: 'Birth, Death & MLC', icon: <OpdIcon sx={{ fontSize: 20 }} />, path: '/portal/birth-death' },
-      { label: 'Biomedical Waste', icon: <InventoryIcon sx={{ fontSize: 20 }} />, path: '/portal/biomedical-waste' },
-      { label: 'Cashless & Insurance', icon: <FinanceIcon sx={{ fontSize: 20 }} />, path: '/portal/insurance' },
-      { label: 'Laboratory', icon: <LabIcon sx={{ fontSize: 20 }} />, path: '/portal/laboratory' },
-      { label: 'Radiology', icon: <RadiologyIcon sx={{ fontSize: 20 }} />, path: '/portal/radiology' },
-      { label: 'Pharmacy', icon: <PharmacyIcon sx={{ fontSize: 20 }} />, path: '/portal/pharmacy' },
-      { label: 'OT & Surgery', icon: <SurgeryIcon sx={{ fontSize: 20 }} />, path: '/portal/surgery' },
-      { label: 'Blood Bank', icon: <BloodBankIcon sx={{ fontSize: 20 }} />, path: '/portal/blood-bank' },
+      { label: 'Hospital Dashboard', icon: <OpdIcon sx={{ fontSize: 20 }} />, path: '/portal/hospital', roles: ['admin', 'dean', 'faculty', 'doctor', 'finance'] },
+      { label: 'OPD', icon: <OpdIcon sx={{ fontSize: 20 }} />, path: '/portal/opd', roles: ['admin', 'dean', 'faculty', 'doctor'] },
+      { label: 'IPD', icon: <IpdIcon sx={{ fontSize: 20 }} />, path: '/portal/ipd', roles: ['admin', 'dean', 'faculty', 'doctor'] },
+      { label: 'Emergency', icon: <EmergencyIcon sx={{ fontSize: 20 }} />, path: '/portal/emergency', roles: ['admin', 'dean', 'faculty', 'doctor'] },
+      { label: 'Birth, Death & MLC', icon: <OpdIcon sx={{ fontSize: 20 }} />, path: '/portal/birth-death', roles: ['admin', 'dean', 'faculty', 'doctor', 'registrar'] },
+      { label: 'Biomedical Waste', icon: <InventoryIcon sx={{ fontSize: 20 }} />, path: '/portal/biomedical-waste', roles: ['admin', 'dean', 'faculty', 'doctor', 'staff'] },
+      { label: 'Cashless & Insurance', icon: <FinanceIcon sx={{ fontSize: 20 }} />, path: '/portal/insurance', roles: ['admin', 'dean', 'finance', 'faculty', 'doctor'] },
+      { label: 'Laboratory', icon: <LabIcon sx={{ fontSize: 20 }} />, path: '/portal/laboratory', roles: ['admin', 'dean', 'faculty', 'doctor'] },
+      { label: 'Radiology', icon: <RadiologyIcon sx={{ fontSize: 20 }} />, path: '/portal/radiology', roles: ['admin', 'dean', 'faculty', 'doctor'] },
+      { label: 'Pharmacy', icon: <PharmacyIcon sx={{ fontSize: 20 }} />, path: '/portal/pharmacy', roles: ['admin', 'dean', 'faculty', 'doctor'] },
+      { label: 'OT & Surgery', icon: <SurgeryIcon sx={{ fontSize: 20 }} />, path: '/portal/surgery', roles: ['admin', 'dean', 'faculty', 'doctor'] },
+      { label: 'Blood Bank', icon: <BloodBankIcon sx={{ fontSize: 20 }} />, path: '/portal/blood-bank', roles: ['admin', 'dean', 'faculty', 'doctor'] },
     ],
   },
   {
     label: 'ADMINISTRATION',
     items: [
-      { label: 'Hostel', icon: <HostelIcon sx={{ fontSize: 20 }} />, path: '/portal/hostel' },
-      { label: 'Library', icon: <LibraryIcon sx={{ fontSize: 20 }} />, path: '/portal/library' },
-      { label: 'Fees & Finance', icon: <FinanceIcon sx={{ fontSize: 20 }} />, path: '/portal/finance' },
-      { label: 'HR & Payroll', icon: <HrIcon sx={{ fontSize: 20 }} />, path: '/portal/hr' },
-      { label: 'Inventory', icon: <InventoryIcon sx={{ fontSize: 20 }} />, path: '/portal/inventory' },
-      { label: 'Transport', icon: <TransportIcon sx={{ fontSize: 20 }} />, path: '/portal/transport' },
+      { label: 'Hostel', icon: <HostelIcon sx={{ fontSize: 20 }} />, path: '/portal/hostel', roles: ['admin', 'dean', 'student', 'staff'] },
+      { label: 'Library', icon: <LibraryIcon sx={{ fontSize: 20 }} />, path: '/portal/library', roles: ['admin', 'dean', 'faculty', 'doctor', 'student', 'staff'] },
+      { label: 'Fees & Finance', icon: <FinanceIcon sx={{ fontSize: 20 }} />, path: '/portal/finance', roles: ['admin', 'dean', 'finance', 'student'] },
+      { label: 'HR & Payroll', icon: <HrIcon sx={{ fontSize: 20 }} />, path: '/portal/hr', roles: ['admin', 'dean', 'finance', 'hr'] },
+      { label: 'Inventory', icon: <InventoryIcon sx={{ fontSize: 20 }} />, path: '/portal/inventory', roles: ['admin', 'dean', 'finance', 'staff'] },
+      { label: 'Transport', icon: <TransportIcon sx={{ fontSize: 20 }} />, path: '/portal/transport', roles: ['admin', 'dean', 'student', 'staff'] },
     ],
   },
   {
     label: 'COMMUNICATION',
     items: [
-      { label: 'Notifications', icon: <NotifyIcon sx={{ fontSize: 20 }} />, path: '/portal/notifications' },
-      { label: 'Staff Messages', icon: <ChatIcon sx={{ fontSize: 20 }} />, path: '/portal/messages' },
+      { label: 'Website Inquiries & Leads', icon: <EmailIcon sx={{ fontSize: 20 }} />, path: '/portal/inquiries', roles: ['admin', 'dean', 'editor', 'publisher', 'registrar'] },
+      { label: 'Notifications', icon: <NotifyIcon sx={{ fontSize: 20 }} />, path: '/portal/notifications', roles: ['all'] },
+      { label: 'Staff Messages', icon: <ChatIcon sx={{ fontSize: 20 }} />, path: '/portal/messages', roles: ['all'] },
     ],
   },
   {
     label: 'REPORTS & ROLES',
     items: [
-      { label: 'NMC MSR Audit', icon: <ReportsIcon sx={{ fontSize: 20 }} />, path: '/portal/nmc-audit' },
-      { label: 'Research', icon: <ResearchIcon sx={{ fontSize: 20 }} />, path: '/portal/research' },
-      { label: 'Reports', icon: <ReportsIcon sx={{ fontSize: 20 }} />, path: '/portal/reports' },
-      { label: 'Roles & Access', icon: <SettingsIcon sx={{ fontSize: 20 }} />, path: '/portal/roles' },
-      { label: 'Settings', icon: <SettingsIcon sx={{ fontSize: 20 }} />, path: '/portal/settings' },
+      { label: 'NMC MSR Audit', icon: <ReportsIcon sx={{ fontSize: 20 }} />, path: '/portal/nmc-audit', roles: ['admin', 'dean', 'auditor'] },
+      { label: 'Research', icon: <ResearchIcon sx={{ fontSize: 20 }} />, path: '/portal/research', roles: ['admin', 'dean', 'faculty', 'doctor'] },
+      { label: 'Reports', icon: <ReportsIcon sx={{ fontSize: 20 }} />, path: '/portal/reports', roles: ['admin', 'dean', 'faculty', 'doctor', 'finance', 'auditor'] },
+      { label: 'My Profile', icon: <PersonIcon sx={{ fontSize: 20 }} />, path: '/portal/profile', roles: ['all'] },
+      { label: 'Roles & Access', icon: <SecurityIcon sx={{ fontSize: 20 }} />, path: '/portal/roles', roles: ['admin', 'dean'] },
+      { label: 'Settings', icon: <SettingsIcon sx={{ fontSize: 20 }} />, path: '/portal/settings', roles: ['admin', 'dean'] },
     ],
   },
 ];
@@ -217,6 +255,22 @@ function Sidebar({
   const router = useRouter();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('lg'));
+  const { user } = useAuth();
+
+  const userRole = (user?.role || '').toLowerCase();
+  const isSuperUser = ['admin', 'dean', 'principal', 'super admin'].includes(userRole);
+
+  const filteredSections = useMemo(() => {
+    return navSections
+      .map((section) => {
+        const visibleItems = section.items.filter((item) => {
+          if (!item.roles || item.roles.includes('all') || isSuperUser) return true;
+          return item.roles.includes(userRole);
+        });
+        return { ...section, items: visibleItems };
+      })
+      .filter((section) => section.items.length > 0);
+  }, [userRole, isSuperUser]);
 
   const currentWidth = collapsed && !isMobile ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH;
 
@@ -236,7 +290,7 @@ function Sidebar({
         py: 2,
         display: 'flex',
         alignItems: 'center',
-        justifyContent: collapsed && !isMobile ? 'center' : 'space-between',
+        justifyContent: collapsed && !isMobile ? 'center' : 'flex-start',
         minHeight: TOPBAR_HEIGHT,
         borderBottom: '1px solid rgba(255,255,255,0.08)',
       }}>
@@ -280,19 +334,11 @@ function Sidebar({
             </Box>
           )}
         </Stack>
-
-        {(!collapsed || isMobile) && !isMobile && (
-          <Tooltip title="Collapse Sidebar">
-            <IconButton size="small" onClick={onToggleCollapse} sx={{ color: '#94A3B8', '&:hover': { color: '#FFFFFF', bgcolor: 'rgba(255,255,255,0.08)' } }}>
-              <ChevronLeftIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        )}
       </Box>
 
       {/* ─── Navigation Links ─── */}
       <Box sx={{ flex: 1, overflowY: 'auto', py: 1.5, px: collapsed && !isMobile ? 0.8 : 1.2 }}>
-        {navSections.map((section, sIdx) => (
+        {filteredSections.map((section, sIdx) => (
           <Box key={sIdx} sx={{ mb: 1 }}>
             {section.label && (!collapsed || isMobile) && (
               <Typography sx={{
@@ -470,13 +516,15 @@ function TopBar({
           <MenuIcon />
         </IconButton>
 
-        <IconButton
-          edge="start"
-          onClick={onToggleCollapse}
-          sx={{ display: { xs: 'none', md: 'inline-flex' }, color: '#64748B' }}
-        >
-          <MenuIcon />
-        </IconButton>
+        <Tooltip title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
+          <IconButton
+            edge="start"
+            onClick={onToggleCollapse}
+            sx={{ display: { xs: 'none', md: 'inline-flex' }, color: '#64748B' }}
+          >
+            <MenuIcon />
+          </IconButton>
+        </Tooltip>
 
         {/* Search Input Bar (Clean single container, 40px height) */}
         <Box sx={{
@@ -674,16 +722,27 @@ function TopBar({
               alignItems: 'center',
               gap: 1.2,
               cursor: 'pointer',
-              px: 1.2,
+              px: 1.4,
               py: 0.6,
-              borderRadius: '10px',
-              border: '1px solid transparent',
-              transition: 'all 0.15s',
-              '&:hover': { bgcolor: '#F8FAFC', borderColor: '#E2E8F0' },
+              borderRadius: '12px',
+              bgcolor: '#FFFFFF',
+              border: '1px solid #E2E8F0',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+              transition: 'all 0.15s ease',
+              '&:hover': {
+                bgcolor: '#F8FAFC',
+                borderColor: '#CBD5E1',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+              },
             }}
           >
             <Avatar
-              src={(user as any)?.avatarUrl || '/images/doctor-placeholder.svg'}
+              src={
+                (user as any)?.avatarUrl ||
+                (user?.name && /ananya|priyanka|sunita|sadia|farzana|fatima|meera|neha|shireen/i.test(user.name)
+                  ? '/images/doctor-female-placeholder.svg'
+                  : '/images/doctor-placeholder.svg')
+              }
               alt={user?.name || 'User'}
               sx={{
                 width: 36,
@@ -718,10 +777,13 @@ function TopBar({
               },
             }}
           >
-            <MenuItem onClick={() => { setAnchorEl(null); router.push('/portal/roles'); }} sx={{ fontSize: '0.8125rem', gap: 1.2, py: 1 }}>
-              <PersonIcon fontSize="small" sx={{ color: '#0F766E' }} /> Roles &amp; Permissions
+            <MenuItem onClick={() => { setAnchorEl(null); router.push('/portal/profile'); }} sx={{ fontSize: '0.8125rem', gap: 1.2, py: 1 }}>
+              <AccountCircleIcon fontSize="small" sx={{ color: '#0F766E' }} /> My Profile
             </MenuItem>
-            <MenuItem onClick={() => setAnchorEl(null)} sx={{ fontSize: '0.8125rem', gap: 1.2, py: 1 }}>
+            <MenuItem onClick={() => { setAnchorEl(null); router.push('/portal/roles'); }} sx={{ fontSize: '0.8125rem', gap: 1.2, py: 1 }}>
+              <SecurityIcon fontSize="small" sx={{ color: '#0284C7' }} /> Roles &amp; Permissions
+            </MenuItem>
+            <MenuItem onClick={() => { setAnchorEl(null); router.push('/portal/settings'); }} sx={{ fontSize: '0.8125rem', gap: 1.2, py: 1 }}>
               <SettingsIcon fontSize="small" sx={{ color: '#64748B' }} /> System Settings
             </MenuItem>
             <Divider />

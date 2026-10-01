@@ -32,6 +32,10 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 import Alert from '@mui/material/Alert';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { MedoraDataGridPagination } from '../../../Pagination';
+import { StatusBadge } from '../../../StatusBadge';
+import { PageHeader } from '../../../PageHeader';
+import toast from 'react-hot-toast';
+import { useConfirm } from '../../../ConfirmDialog';
 
 // Icons
 import LocalHospitalIcon from '@mui/icons-material/LocalHospital';
@@ -46,6 +50,7 @@ import MedicationIcon from '@mui/icons-material/Medication';
 import ScienceIcon from '@mui/icons-material/Science';
 import PrintIcon from '@mui/icons-material/Print';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlineOutlined';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import CampaignIcon from '@mui/icons-material/Campaign';
 import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
 
@@ -157,6 +162,7 @@ const initialTokens: OpdToken[] = [
 
 export default function OpdManagementPage() {
   const router = useRouter();
+  const confirm = useConfirm();
   const [tokens, setTokens] = useState<OpdToken[]>(initialTokens);
   const [selectedDept, setSelectedDept] = useState('ALL');
   const [selectedStatus, setSelectedStatus] = useState('ALL');
@@ -188,6 +194,71 @@ export default function OpdManagementPage() {
     room: 'Room 102',
     priority: 'Normal' as const,
   });
+
+  // Edit Token state
+  const [editTokenOpen, setEditTokenOpen] = useState(false);
+  const [tokenToEdit, setTokenToEdit] = useState<OpdToken | null>(null);
+  const [editTokenForm, setEditTokenForm] = useState({
+    patientName: '',
+    department: '',
+    doctor: '',
+    room: '',
+    triagePriority: 'Normal' as 'Normal' | 'Urgent' | 'Elderly / Pediatric',
+    status: 'Waiting' as OpdStatus,
+  });
+
+  // Delete Token state
+  const [deleteTokenOpen, setDeleteTokenOpen] = useState(false);
+  const [tokenToDelete, setTokenToDelete] = useState<OpdToken | null>(null);
+
+  const handleOpenEditToken = (token: OpdToken) => {
+    setTokenToEdit(token);
+    setEditTokenForm({
+      patientName: token.patientName,
+      department: token.department,
+      doctor: token.doctor,
+      room: token.room,
+      triagePriority: token.triagePriority,
+      status: token.status,
+    });
+    setEditTokenOpen(true);
+  };
+
+  const handleSaveEditToken = async () => {
+    if (!tokenToEdit) return;
+    try {
+      await api(`appointments/${tokenToEdit.id}/status`, 'PATCH', { status: editTokenForm.status }).catch(() => {});
+      setTokens((prev) =>
+        prev.map((t) =>
+          t.id === tokenToEdit.id ? { ...t, ...editTokenForm } : t
+        )
+      );
+      toast.success(`Token ${tokenToEdit.token} updated successfully.`);
+      setEditTokenOpen(false);
+      setTokenToEdit(null);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update token.');
+    }
+  };
+
+  const handleOpenDeleteToken = (token: OpdToken) => {
+    setTokenToDelete(token);
+    setDeleteTokenOpen(true);
+  };
+
+  const handleConfirmDeleteToken = async () => {
+    if (!tokenToDelete) return;
+    try {
+      await api(`appointments/${tokenToDelete.id}/status`, 'PATCH', { status: 'Cancelled' }).catch(() => {});
+      setTokens((prev) => prev.filter((t) => t.id !== tokenToDelete.id));
+      toast.success(`Token ${tokenToDelete.token} (${tokenToDelete.patientName}) cancelled.`);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to cancel token.');
+    } finally {
+      setDeleteTokenOpen(false);
+      setTokenToDelete(null);
+    }
+  };
 
   const loadAppointments = () => {
     api('appointments')
@@ -277,7 +348,7 @@ export default function OpdManagementPage() {
       )
     );
     setConsultModalOpen(false);
-    alert(`Prescription for Token ${activeConsultToken.token} (${activeConsultToken.patientName}) generated and sent to Hospital Pharmacy!`);
+    toast.success(`Prescription for Token ${activeConsultToken.token} (${activeConsultToken.patientName}) generated and sent to Hospital Pharmacy!`);
   };
 
   const handleCallToken = (token: OpdToken) => {
@@ -288,7 +359,7 @@ export default function OpdManagementPage() {
         t.id === token.id ? { ...t, status: 'In Consultation' } : t
       )
     );
-    alert(`📢 Calling Token ${token.token}: ${token.patientName} to ${token.room} (${token.department})`);
+    toast.success(`📢 Calling Token ${token.token}: ${token.patientName} to ${token.room} (${token.department})`);
   };
 
   const handleCreateToken = async () => {
@@ -342,16 +413,10 @@ export default function OpdManagementPage() {
       headerName: 'Token #',
       width: 100,
       renderCell: (params: GridRenderCellParams) => (
-        <Chip
-          label={params.value}
-          size="small"
-          sx={{
-            fontWeight: 800,
-            fontSize: '0.75rem',
-            bgcolor: params.row.status === 'In Consultation' ? '#FEF3C7' : '#F1F5F9',
-            color: params.row.status === 'In Consultation' ? '#B45309' : '#0F172A',
-            border: params.row.status === 'In Consultation' ? '1px solid #F59E0B' : '1px solid #E2E8F0',
-          }}
+        <StatusBadge
+          status={String(params.value)}
+          tone={params.row.status === 'In Consultation' ? 'warning' : 'neutral'}
+          showDot={false}
         />
       ),
     },
@@ -382,15 +447,7 @@ export default function OpdManagementPage() {
       width: 140,
       renderCell: (params: GridRenderCellParams) => {
         const p = params.value as string;
-        const color = p === 'Urgent' ? '#DC2626' : p === 'Elderly / Pediatric' ? '#7C3AED' : '#059669';
-        const bg = p === 'Urgent' ? '#FEF2F2' : p === 'Elderly / Pediatric' ? '#FAF5FF' : '#ECFDF5';
-        return (
-          <Chip
-            label={p}
-            size="small"
-            sx={{ fontWeight: 700, fontSize: '0.68rem', bgcolor: bg, color: color, height: 22, borderRadius: '4px' }}
-          />
-        );
+        return <StatusBadge status={p} />;
       },
     },
     { field: 'department', headerName: 'Clinic & Room', flex: 1, minWidth: 170, valueGetter: (_, row) => `${row.department} (${row.room})` },
@@ -399,34 +456,21 @@ export default function OpdManagementPage() {
     {
       field: 'status',
       headerName: 'Queue Status',
-      width: 140,
+      width: 150,
       renderCell: (params: GridRenderCellParams) => {
-        const val = params.value as OpdStatus;
-        const conf: Record<OpdStatus, { bg: string; color: string }> = {
-          'Waiting': { bg: '#EFF6FF', color: '#1D4ED8' },
-          'In Consultation': { bg: '#FEF3C7', color: '#B45309' },
-          'Completed': { bg: '#F0FDF4', color: '#16A34A' },
-          'No Show': { bg: '#FEF2F2', color: '#DC2626' },
-        };
-        const c = conf[val] || { bg: '#F1F5F9', color: '#475569' };
-        return (
-          <Chip
-            label={val}
-            size="small"
-            sx={{ bgcolor: c.bg, color: c.color, fontWeight: 700, fontSize: '0.72rem', height: 22, borderRadius: '5px' }}
-          />
-        );
+        const val = params.value as string;
+        return <StatusBadge status={val} />;
       },
     },
     {
       field: 'actions',
-      headerName: 'Doctor Actions',
-      width: 190,
+      headerName: 'Actions',
+      width: 250,
       sortable: false,
       renderCell: (params: GridRenderCellParams) => {
         const token = params.row as OpdToken;
         return (
-          <Stack direction="row" spacing={0.8} sx={{ alignItems: 'center', height: '100%' }}>
+          <Stack direction="row" spacing={0.6} sx={{ alignItems: 'center', height: '100%' }}>
             {token.status === 'Waiting' && (
               <>
                 <Button
@@ -461,7 +505,7 @@ export default function OpdManagementPage() {
                 size="small"
                 variant="outlined"
                 startIcon={<PrintIcon sx={{ fontSize: 14 }} />}
-                onClick={() => alert(`Printing Prescription for ${token.patientName}...`)}
+                onClick={() => toast.success(`Printing Prescription for ${token.patientName}...`)}
                 sx={{ textTransform: 'none', fontSize: '0.72rem', py: 0.2, borderRadius: '6px', borderColor: '#CBD5E1', color: '#475569' }}
               >
                 Print Rx
@@ -476,6 +520,24 @@ export default function OpdManagementPage() {
                 <VisibilityOutlinedIcon sx={{ fontSize: 18 }} />
               </IconButton>
             </Tooltip>
+            <Tooltip title="Edit Token Details">
+              <IconButton
+                size="small"
+                onClick={() => handleOpenEditToken(token)}
+                sx={{ color: '#0284C7' }}
+              >
+                <EditOutlinedIcon sx={{ fontSize: 18 }} />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Cancel / Delete Token">
+              <IconButton
+                size="small"
+                onClick={() => handleOpenDeleteToken(token)}
+                sx={{ color: '#E11D48' }}
+              >
+                <DeleteOutlineIcon sx={{ fontSize: 18 }} />
+              </IconButton>
+            </Tooltip>
           </Stack>
         );
       },
@@ -485,44 +547,36 @@ export default function OpdManagementPage() {
   return (
     <Box sx={{ pb: 6 }}>
       {/* ─── Header ─── */}
-      <Box sx={{ mb: 3 }}>
-        <Breadcrumbs sx={{ fontSize: '0.8125rem', mb: 0.5 }}>
-          <Link underline="hover" color="inherit" href="/portal/hospital">
-            Hospital
-          </Link>
-          <Typography color="text.primary" sx={{ fontSize: '0.8125rem', fontWeight: 600 }}>
-            OPD & Doctor Consultation
-          </Typography>
-        </Breadcrumbs>
-        <Stack direction={{ xs: 'column', md: 'row' }} sx={{ justifyContent: 'space-between', alignItems: { xs: 'flex-start', md: 'center' } }}>
-          <Box>
-            <Typography sx={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: { xs: '1.5rem', sm: '1.875rem' }, color: '#0F172A', letterSpacing: '-0.025em', lineHeight: 1.2 }}>
-              OPD Clinic & Consultation Desk
-            </Typography>
-            <Typography sx={{ color: '#64748B', fontSize: '0.925rem', mt: 0.5 }}>
-              Live outpatient token queue, doctor consultation workstation, and electronic prescription (Rx) writer.
-            </Typography>
-          </Box>
+      <PageHeader
+        breadcrumbs={[
+          { label: 'Hospital', href: '/portal/hospital' },
+          { label: 'OPD & Doctor Consultation' },
+        ]}
+        category="Clinical Services"
+        title="OPD Clinic & Consultation Desk"
+        description="Live outpatient token queue, doctor consultation workstation, and electronic prescription (Rx) writer."
+        icon={<LocalHospitalIcon />}
+        actions={
           <Button
             variant="contained"
             startIcon={<AddIcon />}
             onClick={() => setNewTokenOpen(true)}
             sx={{
-              mt: { xs: 2, md: 0 },
               bgcolor: '#0F766E',
               fontWeight: 700,
               fontSize: '0.8125rem',
               borderRadius: '8px',
               textTransform: 'none',
-              px: 2,
+              px: 2.5,
+              py: 1,
               boxShadow: '0 2px 6px rgba(15,118,110,0.2)',
               '&:hover': { bgcolor: '#0D6861' },
             }}
           >
             + Issue OPD Token
           </Button>
-        </Stack>
-      </Box>
+        }
+      />
 
       {/* ─── KPI Cards ─── */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
@@ -826,9 +880,16 @@ export default function OpdManagementPage() {
             <Button
               color="error"
               variant="outlined"
-              onClick={() => {
-                if (confirm('Transfer this patient to IPD Ward for emergency admission?')) {
+              onClick={async () => {
+                const ok = await confirm({
+                  title: 'Emergency IPD Admission',
+                  message: `Transfer ${activeConsultToken?.patientName || 'this patient'} to IPD Ward for emergency hospital admission?`,
+                  confirmText: 'Transfer & Admit to IPD',
+                  severity: 'error',
+                });
+                if (ok) {
                   router.push('/portal/ipd');
+                  toast.success('Patient transfer protocol initiated');
                 }
               }}
               sx={{ textTransform: 'none', fontWeight: 700 }}
@@ -929,6 +990,140 @@ export default function OpdManagementPage() {
             sx={{ bgcolor: '#0F766E', fontWeight: 700, textTransform: 'none', borderRadius: '8px', px: 3, '&:hover': { bgcolor: '#0D6861' } }}
           >
             Generate Token
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ─── Edit Token Modal ─── */}
+      <Dialog
+        open={editTokenOpen}
+        onClose={() => setEditTokenOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        slotProps={{ paper: { sx: { borderRadius: '16px', p: 1 } } }}
+      >
+        <DialogTitle component="div" sx={{ fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Typography component="span" variant="h6" sx={{ fontWeight: 800 }}>
+            Edit Token Details
+          </Typography>
+          <StatusBadge status={tokenToEdit?.token || ''} tone="warning" showDot={false} />
+        </DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <TextField
+              label="Patient Name"
+              size="small"
+              fullWidth
+              value={editTokenForm.patientName}
+              onChange={(e) => setEditTokenForm({ ...editTokenForm, patientName: e.target.value })}
+            />
+            <TextField
+              label="Consultant Doctor"
+              size="small"
+              fullWidth
+              value={editTokenForm.doctor}
+              onChange={(e) => setEditTokenForm({ ...editTokenForm, doctor: e.target.value })}
+            />
+            <TextField
+              label="Room / Cabin"
+              size="small"
+              fullWidth
+              value={editTokenForm.room}
+              onChange={(e) => setEditTokenForm({ ...editTokenForm, room: e.target.value })}
+            />
+            <Select
+              size="small"
+              fullWidth
+              value={editTokenForm.department}
+              onChange={(e) => setEditTokenForm({ ...editTokenForm, department: e.target.value })}
+            >
+              <MenuItem value="Cardiology Clinic">Cardiology Clinic</MenuItem>
+              <MenuItem value="Pediatrics Clinic">Pediatrics Clinic</MenuItem>
+              <MenuItem value="Gynecology Clinic">Gynecology Clinic</MenuItem>
+              <MenuItem value="Orthopedics Clinic">Orthopedics Clinic</MenuItem>
+              <MenuItem value="General Medicine Clinic">General Medicine Clinic</MenuItem>
+            </Select>
+            <Grid container spacing={2}>
+              <Grid size={{ xs: 6 }}>
+                <Select
+                  size="small"
+                  fullWidth
+                  value={editTokenForm.triagePriority}
+                  onChange={(e) => setEditTokenForm({ ...editTokenForm, triagePriority: e.target.value as any })}
+                >
+                  <MenuItem value="Normal">Priority: Normal</MenuItem>
+                  <MenuItem value="Urgent">Priority: Urgent</MenuItem>
+                  <MenuItem value="Elderly / Pediatric">Priority: Elderly / Pediatric</MenuItem>
+                </Select>
+              </Grid>
+              <Grid size={{ xs: 6 }}>
+                <Select
+                  size="small"
+                  fullWidth
+                  value={editTokenForm.status}
+                  onChange={(e) => setEditTokenForm({ ...editTokenForm, status: e.target.value as any })}
+                >
+                  <MenuItem value="Waiting">Waiting</MenuItem>
+                  <MenuItem value="In Consultation">In Consultation</MenuItem>
+                  <MenuItem value="Completed">Completed</MenuItem>
+                  <MenuItem value="No Show">No Show</MenuItem>
+                </Select>
+              </Grid>
+            </Grid>
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, justifyContent: 'flex-end', gap: 1 }}>
+          <Button onClick={() => setEditTokenOpen(false)} sx={{ textTransform: 'none', color: '#64748B' }}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleSaveEditToken}
+            sx={{
+              textTransform: 'none',
+              fontWeight: 700,
+              bgcolor: '#0F766E',
+              '&:hover': { bgcolor: '#0D6861' },
+            }}
+          >
+            Save Changes
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ─── Cancel / Delete Token Dialog ─── */}
+      <Dialog
+        open={deleteTokenOpen}
+        onClose={() => setDeleteTokenOpen(false)}
+        maxWidth="xs"
+        fullWidth
+        slotProps={{ paper: { sx: { borderRadius: '16px', p: 1 } } }}
+      >
+        <DialogTitle sx={{ fontWeight: 800, color: '#0F172A' }}>
+          Cancel OPD Token
+        </DialogTitle>
+        <DialogContent dividers>
+          <Typography sx={{ color: '#475569', fontSize: '0.875rem', lineHeight: 1.6 }}>
+            Are you sure you want to cancel token{' '}
+            <strong style={{ color: '#0F172A' }}>{tokenToDelete?.token}</strong> for{' '}
+            <strong style={{ color: '#0F172A' }}>{tokenToDelete?.patientName}</strong>?
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, justifyContent: 'flex-end', gap: 1 }}>
+          <Button onClick={() => setDeleteTokenOpen(false)} sx={{ textTransform: 'none', color: '#64748B' }}>
+            Back
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleConfirmDeleteToken}
+            sx={{
+              textTransform: 'none',
+              fontWeight: 700,
+              bgcolor: '#E11D48',
+              '&:hover': { bgcolor: '#BE123C' },
+            }}
+          >
+            Cancel Token
           </Button>
         </DialogActions>
       </Dialog>

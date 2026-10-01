@@ -28,6 +28,9 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import TextField from '@mui/material/TextField';
 import MenuItem from '@mui/material/MenuItem';
+import toast from 'react-hot-toast';
+import { StatusBadge } from '../../../StatusBadge';
+import { PageHeader } from '../../../PageHeader';
 
 // Icons
 import SchoolIcon from '@mui/icons-material/School';
@@ -79,7 +82,7 @@ export default function StudentPortalPage() {
   const handleAddLog = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newLog.code || !newLog.competency) {
-      alert('Please fill out the competency details.');
+      toast.error('Please fill out the competency details.');
       return;
     }
     const item = {
@@ -98,85 +101,112 @@ export default function StudentPortalPage() {
   };
 
   return (
-    <Box sx={{ p: { xs: 2, md: 3 } }}>
+    <Box sx={{ pb: 6 }}>
+      {/* ─── Breadcrumbs & Header ─── */}
+      <PageHeader
+        breadcrumbs={[
+          { label: 'Dashboard', href: '/portal/dashboard' },
+          { label: 'Role Workspaces', href: '/portal/roles' },
+          { label: 'Student Portal' },
+        ]}
+        category="Student Academic Console"
+        title="Student Portal & CBME Portfolio"
+        description="Comprehensive learner cockpit: CBME logbook, theory/clinical attendance threshold tracking, and university examination status."
+        icon={<SchoolIcon />}
+        badge={<StatusBadge status="Phase II Candidate" tone="teal" />}
+        actions={
+          <Button
+            variant="contained"
+            startIcon={<DownloadIcon />}
+            onClick={() => toast.success('Generating official University Examination Hall Ticket PDF...')}
+            sx={{
+              bgcolor: '#0F766E',
+              color: '#FFFFFF',
+              fontWeight: 700,
+              textTransform: 'none',
+              borderRadius: '8px',
+              px: 2.5,
+              py: 0.9,
+              boxShadow: '0 2px 6px rgba(15,118,110,0.2)',
+              '&:hover': { bgcolor: '#0D6861' },
+            }}
+          >
+            Download Hall Ticket
+          </Button>
+        }
+      />
+
       {/* Student Profile Card Header */}
       <Card
+        elevation={0}
         sx={{
           mb: 3,
-          borderRadius: 3.5,
-          background: 'linear-gradient(135deg, #0F172A 0%, #102A43 55%, #0F766E 100%)',
-          color: '#FFFFFF',
-          p: { xs: 2.5, md: 3.5 },
-          boxShadow: '0 8px 30px rgba(15, 118, 110, 0.15)',
+          borderRadius: '16px',
+          bgcolor: '#FFFFFF',
+          border: '1px solid #E2E8F0',
+          p: { xs: 2.5, md: 3 },
+          boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
         }}
       >
         <Grid container spacing={3} sx={{ alignItems: 'center' }}>
           <Grid size={{ xs: 12, md: 'auto' }}>
             <Avatar
               sx={{
-                width: 90,
-                height: 90,
-                bgcolor: '#5EEAD4',
-                color: '#0F172A',
-                fontSize: '2rem',
+                width: 80,
+                height: 80,
+                bgcolor: '#F0FDFA',
+                color: '#0F766E',
+                fontSize: '1.8rem',
                 fontWeight: 800,
-                border: '4px solid rgba(255,255,255,0.2)',
+                border: '2px solid #0F766E',
+                boxShadow: '0 4px 12px rgba(15,118,110,0.15)',
               }}
             >
               AM
             </Avatar>
           </Grid>
 
-          <Grid size={{ xs: 12, md: 7 }}>
-            <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', mb: 0.5, flexWrap: 'wrap' }}>
-              <Typography variant="h4" sx={{ fontWeight: 800, letterSpacing: -0.5 }}>
+          <Grid size={{ xs: 12, md: 8 }}>
+            <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', mb: 0.5, flexWrap: 'wrap', gap: 1 }}>
+              <Typography sx={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: { xs: '1.35rem', sm: '1.6rem' }, color: '#0F172A' }}>
                 {STUDENT_PROFILE.name}
               </Typography>
-              <Chip
-                label="ACTIVE CANDIDATE"
-                size="small"
-                sx={{ bgcolor: '#10B981', color: '#FFFFFF', fontWeight: 800, fontSize: '0.7rem' }}
-              />
-              <Chip
-                label={STUDENT_PROFILE.bloodGroup}
-                size="small"
-                sx={{ bgcolor: 'rgba(239, 68, 68, 0.2)', color: '#FCA5A5', fontWeight: 700 }}
-              />
+              <StatusBadge status="Active Candidate" tone="success" />
+              <StatusBadge status={STUDENT_PROFILE.bloodGroup} tone="error" />
             </Stack>
 
-            <Typography variant="body2" sx={{ color: '#5EEAD4', fontWeight: 600, mb: 1 }}>
+            <Typography sx={{ color: '#0F766E', fontWeight: 700, fontSize: '0.875rem', mb: 1 }}>
               {STUDENT_PROFILE.program} • {STUDENT_PROFILE.currentPhase}
             </Typography>
 
-            <Grid container spacing={2} sx={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.8125rem' }}>
+            <Grid container spacing={2} sx={{ color: '#64748B', fontSize: '0.8125rem' }}>
               <Grid size={{ xs: 12, sm: 6 }}>
                 <strong>Roll No:</strong> {STUDENT_PROFILE.rollNo} • <strong>Reg:</strong> {STUDENT_PROFILE.regNo}
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
                 <strong>Clinical Mentor:</strong> {STUDENT_PROFILE.mentor}
               </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <strong>Hostel:</strong> {STUDENT_PROFILE.hostelRoom}
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <strong>Academic Standing:</strong> <span style={{ color: '#059669', fontWeight: 700 }}>{STUDENT_PROFILE.overallGpa}</span>
+              </Grid>
             </Grid>
           </Grid>
 
           <Grid size={{ xs: 12, md: 3 }} sx={{ textAlign: { md: 'right' } }}>
-            <Button
-              variant="contained"
-              startIcon={<DownloadIcon />}
-              onClick={() => alert('Generating official University Examination Hall Ticket PDF...')}
-              sx={{
-                bgcolor: '#5EEAD4',
-                color: '#0F172A',
-                fontWeight: 700,
-                textTransform: 'none',
-                borderRadius: 2,
-                '&:hover': { bgcolor: '#99F6E4' },
-              }}
-            >
-              Download Hall Ticket
-            </Button>
-            <Typography variant="caption" sx={{ display: 'block', color: 'rgba(255,255,255,0.6)', mt: 1 }}>
-              Univ Exam Center: Hall 2 (Bio-Block)
-            </Typography>
+            <Paper elevation={0} sx={{ p: 2, borderRadius: '12px', border: '1px solid #E2E8F0', bgcolor: '#F8FAFC', textAlign: 'center' }}>
+              <Typography sx={{ fontSize: '0.6875rem', color: '#64748B', fontWeight: 700, textTransform: 'uppercase' }}>
+                Univ Exam Center
+              </Typography>
+              <Typography sx={{ fontSize: '0.875rem', fontWeight: 800, color: '#0F172A', mt: 0.5 }}>
+                Hall 2 (Bio-Block)
+              </Typography>
+              <Typography sx={{ fontSize: '0.6875rem', color: '#0F766E', fontWeight: 600 }}>
+                Admit Card Verified
+              </Typography>
+            </Paper>
           </Grid>
         </Grid>
       </Card>
@@ -192,7 +222,7 @@ export default function StudentPortalPage() {
               <Typography variant="h4" sx={{ fontWeight: 800, color: '#0F766E' }}>
                 84.5%
               </Typography>
-              <Chip label="ELIGIBLE" size="small" sx={{ bgcolor: '#ECFDF5', color: '#059669', fontWeight: 800, height: 20 }} />
+              <StatusBadge status="ELIGIBLE" tone="success" />
             </Stack>
             <LinearProgress variant="determinate" value={84.5} sx={{ height: 6, borderRadius: 3, bgcolor: '#E2E8F0', '& .MuiLinearProgress-bar': { bgcolor: '#0F766E' } }} />
             <Typography variant="caption" sx={{ color: '#64748B', mt: 1, display: 'block' }}>
@@ -210,7 +240,7 @@ export default function StudentPortalPage() {
               <Typography variant="h4" sx={{ fontWeight: 800, color: '#0284C7' }}>
                 91.2%
               </Typography>
-              <Chip label="ELIGIBLE" size="small" sx={{ bgcolor: '#F0F9FF', color: '#0284C7', fontWeight: 800, height: 20 }} />
+              <StatusBadge status="ELIGIBLE" tone="info" />
             </Stack>
             <LinearProgress variant="determinate" value={91.2} sx={{ height: 6, borderRadius: 3, bgcolor: '#E2E8F0', '& .MuiLinearProgress-bar': { bgcolor: '#0284C7' } }} />
             <Typography variant="caption" sx={{ color: '#64748B', mt: 1, display: 'block' }}>
@@ -228,7 +258,7 @@ export default function StudentPortalPage() {
               <Typography variant="h4" sx={{ fontWeight: 800, color: '#7C3AED' }}>
                 112 / 140
               </Typography>
-              <Chip label="80% DONE" size="small" sx={{ bgcolor: '#FAF5FF', color: '#7C3AED', fontWeight: 800, height: 20 }} />
+              <StatusBadge status="80% DONE" tone="purple" />
             </Stack>
             <LinearProgress variant="determinate" value={80} sx={{ height: 6, borderRadius: 3, bgcolor: '#E2E8F0', '& .MuiLinearProgress-bar': { bgcolor: '#7C3AED' } }} />
             <Typography variant="caption" sx={{ color: '#64748B', mt: 1, display: 'block' }}>
@@ -246,7 +276,7 @@ export default function StudentPortalPage() {
               <Typography variant="h4" sx={{ fontWeight: 800, color: '#059669' }}>
                 68.5%
               </Typography>
-              <Chip label="QUALIFIED" size="small" sx={{ bgcolor: '#ECFDF5', color: '#059669', fontWeight: 800, height: 20 }} />
+              <StatusBadge status="QUALIFIED" tone="success" />
             </Stack>
             <LinearProgress variant="determinate" value={68.5} sx={{ height: 6, borderRadius: 3, bgcolor: '#E2E8F0', '& .MuiLinearProgress-bar': { bgcolor: '#059669' } }} />
             <Typography variant="caption" sx={{ color: '#64748B', mt: 1, display: 'block' }}>
@@ -322,23 +352,13 @@ export default function StudentPortalPage() {
                       <TableCell sx={{ fontWeight: 700, color: '#0F766E' }}>{row.code}</TableCell>
                       <TableCell sx={{ fontWeight: 600, color: '#1E293B' }}>{row.competency}</TableCell>
                       <TableCell>
-                        <Chip label={row.category} size="small" sx={{ fontWeight: 700, fontSize: '0.7rem', bgcolor: '#F1F5F9' }} />
+                        <StatusBadge status={row.category} tone="info" showDot={false} />
                       </TableCell>
                       <TableCell sx={{ fontSize: '0.8125rem', color: '#475569' }}>{row.level}</TableCell>
                       <TableCell sx={{ fontSize: '0.8125rem', color: '#334155', fontWeight: 600 }}>{row.verifiedBy}</TableCell>
                       <TableCell sx={{ fontSize: '0.8125rem', color: '#64748B' }}>{row.date}</TableCell>
                       <TableCell>
-                        <Chip
-                          icon={row.status === 'Approved' ? <CheckCircleIcon sx={{ fontSize: 14 }} /> : <WarningAmberIcon sx={{ fontSize: 14 }} />}
-                          label={row.status}
-                          size="small"
-                          sx={{
-                            fontWeight: 700,
-                            fontSize: '0.7rem',
-                            bgcolor: row.status === 'Approved' ? '#ECFDF5' : '#FFFBEB',
-                            color: row.status === 'Approved' ? '#059669' : '#D97706',
-                          }}
-                        />
+                        <StatusBadge status={row.status} />
                       </TableCell>
                     </TableRow>
                   ))}
@@ -423,15 +443,7 @@ export default function StudentPortalPage() {
                       <TableCell>{row.p2}</TableCell>
                       <TableCell sx={{ fontWeight: 800, color: '#0F766E' }}>{row.pct}</TableCell>
                       <TableCell>
-                        <Chip
-                          label={row.status}
-                          size="small"
-                          sx={{
-                            fontWeight: 700,
-                            bgcolor: row.status === 'Distinction' ? '#FAF5FF' : '#ECFDF5',
-                            color: row.status === 'Distinction' ? '#7C3AED' : '#059669',
-                          }}
-                        />
+                        <StatusBadge status={row.status} />
                       </TableCell>
                     </TableRow>
                   ))}
@@ -469,12 +481,12 @@ export default function StudentPortalPage() {
                       <Typography variant="h6" sx={{ fontWeight: 800, color: '#0F766E' }}>
                         {fee.amount}
                       </Typography>
-                      <Chip label={fee.status} size="small" sx={{ bgcolor: '#ECFDF5', color: '#059669', fontWeight: 800 }} />
+                      <StatusBadge status={fee.status} />
                       <Button
                         variant="outlined"
                         size="small"
                         startIcon={<DownloadIcon />}
-                        onClick={() => alert(`Downloading payment receipt ${fee.receiptNo}`)}
+                        onClick={() => toast.success(`Downloading payment receipt ${fee.receiptNo}`)}
                       >
                         Receipt
                       </Button>

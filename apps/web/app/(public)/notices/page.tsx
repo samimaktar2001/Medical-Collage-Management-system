@@ -22,6 +22,7 @@ import {
   DialogActions,
   Alert,
 } from '@mui/material';
+import toast from 'react-hot-toast';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import SearchIcon from '@mui/icons-material/Search';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
@@ -309,7 +310,7 @@ export default function NoticesPage() {
                           fontWeight: 600,
                           '&:hover': { bgcolor: '#115E59' },
                         }}
-                        onClick={() => alert(`Downloading official PDF circular: MMCH_${notice.id}.pdf`)}
+                        onClick={() => toast.success(`Downloading official PDF circular: MMCH_${notice.id}.pdf`)}
                       >
                         Download PDF
                       </Button>
@@ -332,14 +333,14 @@ export default function NoticesPage() {
       >
         {previewNotice && (
           <>
-            <DialogTitle sx={{ pb: 1 }}>
+            <DialogTitle component="div" sx={{ pb: 1 }}>
               <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 1 }}>
                 <Chip label={previewNotice.category} size="small" color="primary" sx={{ bgcolor: '#0F766E', fontWeight: 700 }} />
                 <Typography variant="caption" sx={{ color: '#64748B' }}>
                   Dated: {previewNotice.date}
                 </Typography>
               </Stack>
-              <Typography variant="h6" sx={{ fontWeight: 800, color: '#0F172A', lineHeight: 1.3 }}>
+              <Typography component="h3" variant="h6" sx={{ fontWeight: 800, color: '#0F172A', lineHeight: 1.3 }}>
                 {previewNotice.title}
               </Typography>
             </DialogTitle>
@@ -381,7 +382,7 @@ export default function NoticesPage() {
                 variant="contained"
                 startIcon={<DownloadIcon />}
                 onClick={() => {
-                  alert(`Downloading official signed notice PDF for ${previewNotice.id}`);
+                  toast.success(`Downloading official signed notice PDF for ${previewNotice.id}`);
                   setPreviewNotice(null);
                 }}
                 sx={{ bgcolor: '#0F766E', '&:hover': { bgcolor: '#115E59' } }}

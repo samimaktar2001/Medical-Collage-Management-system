@@ -5,7 +5,11 @@
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "build": "tsc -p apps/api/tsconfig.json && next build apps/web",
+    "build:api": "tsc -p apps/api/tsconfig.json",
+    "build:web": "next build apps/web",
     "start": "node scripts/dev.mjs --production",
+    "start:api": "node dist/api/main.js",
+    "start:web": "next start apps/web",
     "typecheck": "tsc -p apps/api/tsconfig.json --noEmit && tsc -p apps/web/tsconfig.json --noEmit",
     "test": "tsc -p apps/api/tsconfig.json && tsx --test tests/*.test.ts",
     "test:e2e": "playwright test",

@@ -30,6 +30,8 @@ import { useAuth, api } from '../../../PortalShell';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import CheckCircleOutlinedIcon from '@mui/icons-material/CheckCircleOutlined';
+import PersonAddIcon from '@mui/icons-material/PersonAdd';
+import { PageHeader } from '../../../../PageHeader';
 
 const steps = [
   'Patient Demographics',
@@ -272,18 +274,18 @@ export default function NewPatientRegistrationPage() {
 
   return (
     <Box sx={{ pb: 6 }}>
-      <Box sx={{ mb: 3 }}>
-        <Breadcrumbs sx={{ fontSize: '0.8125rem', mb: 1 }}>
-          <Link underline="hover" color="inherit" href="/portal/dashboard">Dashboard</Link>
-          <Link underline="hover" color="inherit" href="/portal/hospital">Hospital</Link>
-          <Typography color="text.primary" sx={{ fontSize: '0.8125rem', fontWeight: 600 }}>Patient Registration</Typography>
-        </Breadcrumbs>
-        <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
-          <Typography sx={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: { xs: '1.5rem', sm: '1.75rem', md: '1.875rem' }, color: '#0F172A', letterSpacing: '-0.025em' }}>
-            New Patient Registration
-          </Typography>
-        </Stack>
-      </Box>
+      {/* ─── Breadcrumbs & Header ─── */}
+      <PageHeader
+        breadcrumbs={[
+          { label: 'Dashboard', href: '/portal/dashboard' },
+          { label: 'Hospital', href: '/portal/hospital' },
+          { label: 'Patient Registration' },
+        ]}
+        category="Hospital Front Desk"
+        title="New Patient Registration & Intake"
+        description="Statutory ABHA compliant outpatient & inpatient electronic medical record registration."
+        icon={<PersonAddIcon />}
+      />
 
       {/* Stepper with horizontal scrolling on mobile */}
       <Paper elevation={0} sx={{ p: 3, mb: 3.5, borderRadius: '12px', border: '1px solid #E2E8F0', overflowX: 'auto' }}>

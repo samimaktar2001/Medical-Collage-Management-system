@@ -1,6 +1,6 @@
 import { PGlite } from '@electric-sql/pglite';
 import { Pool, PoolClient } from 'pg';
-import { readFileSync, mkdirSync, readdirSync } from 'node:fs';
+import { readFileSync, mkdirSync, readdirSync, existsSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { createHash } from 'node:crypto';
 export interface SQL {
@@ -9,6 +9,11 @@ export interface SQL {
 export class Database implements SQL {
   private engine: PGlite | Pool;
   constructor(path = process.env.DATA_DIR || '.data/postgres') {
+    if (!process.env.DATABASE_URL && existsSync('.env')) {
+      try {
+        (process as any).loadEnvFile?.('.env');
+      } catch { }
+    }
     if (!process.env.DATABASE_URL && path !== 'memory://')
       mkdirSync(dirname(path), { recursive: true });
     this.engine = process.env.DATABASE_URL
