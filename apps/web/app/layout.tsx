@@ -21,21 +21,65 @@ export const metadata: Metadata = {
       'Academic programmes, admissions, examinations, student services and institutional information.',
     url: origin,
     locale: 'en_IN',
+    images: [
+      {
+        url: `${origin}/images/campus-hero.jpg`,
+        width: 1200,
+        height: 630,
+        alt: 'Medora Medical College Campus',
+      },
+    ],
   },
   twitter: {
-    card: 'summary',
+    card: 'summary_large_image',
     title: 'Medora Medical College',
     description:
       'Academic programmes, admissions, examinations, student services and institutional information.',
+    images: [`${origin}/images/campus-hero.jpg`],
   },
   robots: {
-    index: false,
-    follow: false,
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
   },
 };
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': ['CollegeOrUniversity', 'MedicalOrganization'],
+  name: 'Medora Medical College',
+  url: origin,
+  logo: `${origin}/favicon.svg`,
+  description: 'Academic programmes, admissions, examinations, student services and institutional information.',
+  sameAs: [
+    'https://twitter.com/medoracollege',
+    'https://facebook.com/medoracollege',
+    'https://linkedin.com/school/medoracollege'
+  ],
+  contactPoint: {
+    '@type': 'ContactPoint',
+    telephone: '+91-1234567890',
+    contactType: 'admissions',
+    areaServed: 'IN',
+    availableLanguage: ['en', 'hi']
+  }
+};
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      </head>
       <body>
         <ThemeRegistry>
           {children}

@@ -1,0 +1,29 @@
+# Medora Medical College
+
+Welcome to Medora Medical College's official website.
+
+## About Us
+Medora Medical College is a premier medical institution providing top-tier academic programmes, clinical facilities, and research opportunities. We are dedicated to providing excellent education in the field of medicine and offering the best medical services.
+
+## Key Links
+- [Home](/)
+- [About Us](/about)
+- [Admissions](/admissions)
+- [Courses](/courses)
+- [Departments](/departments)
+- [Hospital](/hospital)
+- [Research](/research)
+- [Doctors](/doctors)
+- [Contact](/contact)
+
+## Focus Areas
+- High-quality Medical Education
+- Advanced Clinical Training
+- Patient-centric Hospital Services
+- Innovative Medical Research
+
+## Contact Information
+- **Admissions Support:** For any queries related to admissions, please visit our admissions page or contact us via the contact page.
+- **Appointments:** Patients can book appointments with our doctors through the appointment portal online.
+
+*This file is provided for LLMs and AI Agents to better understand and index the structure and offerings of Medora Medical College.*

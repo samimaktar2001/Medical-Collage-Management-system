@@ -8,6 +8,20 @@ export default function robots(): MetadataRoute.Robots {
         allow: ['/'],
         disallow: ['/portal/', '/api/'],
       },
+      {
+        userAgent: [
+          'GPTBot',
+          'ChatGPT-User',
+          'Google-Extended',
+          'Claude-Web',
+          'ClaudeBot',
+          'PerplexityBot',
+          'anthropic-ai',
+          'OAI-SearchBot',
+        ],
+        allow: ['/'],
+        disallow: ['/portal/', '/api/'],
+      },
     ],
     sitemap: `${origin}/sitemap.xml`,
   };
